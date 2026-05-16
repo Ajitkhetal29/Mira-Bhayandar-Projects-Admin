@@ -33,6 +33,7 @@ const AddProject = () => {
     latitude: "",
     longitude: "",
     description: "",
+    reraNo: "",
     reraMonth: "",
     reraYear: "",
   });
@@ -199,6 +200,7 @@ const AddProject = () => {
       fd.append("latitude", form.latitude.trim());
       fd.append("longitude", form.longitude.trim());
       fd.append("description", form.description);
+      fd.append("reraNo", form.reraNo.trim());
       fd.append("reraMonth", form.reraMonth || "");
       fd.append("reraYear", form.reraYear || "");
       fd.append("features", JSON.stringify(features));
@@ -357,6 +359,24 @@ const AddProject = () => {
                   setForm((prev) => ({ ...prev, longitude: e.target.value }))
                 }
                 className="w-full border border-gray-200 rounded-md bg-gray-800 p-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 transition"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="reraNo" className="block text-sm font-semibold mb-2 text-white">
+                RERA number
+              </label>
+              <input
+                id="reraNo"
+                type="text"
+                value={form.reraNo}
+                placeholder="e.g. P51800012345"
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, reraNo: e.target.value }))
+                }
+                className="w-full p-2 border border-gray-200 rounded-md bg-gray-800 text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500"
               />
             </div>
           </div>
@@ -618,11 +638,11 @@ const AddProject = () => {
               <input
                 type="file"
                 ref={reraCertInputRef}
-                accept="application/pdf,image/*"
+                accept=".pdf,application/pdf,image/*"
                 className="hidden"
                 onChange={(e) => {
-                  setReraCertificate(e.target.files?.[0] || null);
-                  e.target.value = null;
+                  const file = e.target.files?.[0];
+                  if (file) setReraCertificate(file);
                 }}
               />
               <button
@@ -641,11 +661,11 @@ const AddProject = () => {
               <input
                 type="file"
                 ref={ocCertInputRef}
-                accept="application/pdf,image/*"
+                accept=".pdf,application/pdf,image/*"
                 className="hidden"
                 onChange={(e) => {
-                  setOcCertificate(e.target.files?.[0] || null);
-                  e.target.value = null;
+                  const file = e.target.files?.[0];
+                  if (file) setOcCertificate(file);
                 }}
               />
               <button
