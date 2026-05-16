@@ -50,6 +50,7 @@ const AllProjects = () => {
                   <th className="px-6 py-4">Location</th>
                   <th className="px-6 py-4">Status</th>
                   <th className="px-6 py-4">Contact</th>
+                  <th className="px-6 py-4">RERA no.</th>
                   <th className="px-6 py-4">RERA possession</th>
                   <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
@@ -80,6 +81,9 @@ const AllProjects = () => {
                       ) : (
                         "—"
                       )}
+                    </td>
+                    <td className="px-6 py-4 text-gray-300 whitespace-nowrap">
+                      {project.reraNo || "—"}
                     </td>
                     <td className="px-6 py-4 text-gray-300">
                       {[project.reraPossession?.month, project.reraPossession?.year]

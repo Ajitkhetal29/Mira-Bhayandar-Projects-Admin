@@ -50,6 +50,7 @@ const UpdateProject = () => {
     latitude: "",
     longitude: "",
     description: "",
+    reraNo: "",
     reraMonth: "",
     reraYear: "",
   });
@@ -79,6 +80,8 @@ const UpdateProject = () => {
   const [coverVideoPreview, setCoverVideoPreview] = useState(null);
   const [coverVideoChanged, setCoverVideoChanged] = useState(false);
 
+  const [reraCertificate, setReraCertificate] = useState(null);
+  const [ocCertificate, setOcCertificate] = useState(null);
   const [reraCertificateChanged, setReraCertificateChanged] = useState(false);
   const [ocCertificateChanged, setOcCertificateChanged] = useState(false);
 
@@ -96,6 +99,7 @@ const UpdateProject = () => {
         longitude:
           found.longitude != null && found.longitude !== "" ? String(found.longitude) : "",
         description: found.description || "",
+        reraNo: found.reraNo || "",
         reraMonth: found.reraPossession?.month || "",
         reraYear:
           found.reraPossession?.year != null
@@ -117,6 +121,8 @@ const UpdateProject = () => {
       setCoverImageChanged(false);
       setBannerImageChanged(false);
       setCoverVideoChanged(false);
+      setReraCertificate(null);
+      setOcCertificate(null);
       setReraCertificateChanged(false);
       setOcCertificateChanged(false);
       setLogoPreview(null);
@@ -228,15 +234,15 @@ const UpdateProject = () => {
   const handleReraCertChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setReraCertificate(file);
     setReraCertificateChanged(true);
-    e.target.value = null;
   };
 
   const handleOcCertChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setOcCertificate(file);
     setOcCertificateChanged(true);
-    e.target.value = null;
   };
 
   const handleAddLayout = () => {
@@ -328,6 +334,7 @@ const UpdateProject = () => {
       fd.append("latitude", form.latitude.trim());
       fd.append("longitude", form.longitude.trim());
       fd.append("description", form.description);
+      fd.append("reraNo", form.reraNo.trim());
       fd.append("reraMonth", form.reraMonth || "");
       fd.append("reraYear", form.reraYear || "");
       fd.append("features", JSON.stringify(features));
@@ -347,10 +354,10 @@ const UpdateProject = () => {
         fd.append("bannerImage", bannerImage);
       if (coverVideoChanged && coverVideo instanceof File)
         fd.append("coverVideo", coverVideo);
-      if (reraCertificateChanged && reraCertInputRef.current?.files?.[0])
-        fd.append("reraCertificate", reraCertInputRef.current.files[0]);
-      if (ocCertificateChanged && ocCertInputRef.current?.files?.[0])
-        fd.append("ocCertificate", ocCertInputRef.current.files[0]);
+      if (reraCertificateChanged && reraCertificate)
+        fd.append("reraCertificate", reraCertificate);
+      if (ocCertificateChanged && ocCertificate)
+        fd.append("ocCertificate", ocCertificate);
 
       fd.append("galleryImages", JSON.stringify(galleryImages || []));
       newGalleryImages.forEach((img) => fd.append("galleryNewImages", img.file));
@@ -479,6 +486,20 @@ const UpdateProject = () => {
                 value={form.longitude}
                 onChange={handleFormChange}
                 className="p-2 rounded-lg bg-gray-800 border border-gray-600 text-white focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="flex flex-col md:col-span-2">
+              <label className="mb-1 text-gray-200">RERA number</label>
+              <input
+                type="text"
+                name="reraNo"
+                value={form.reraNo}
+                placeholder="e.g. P51800012345"
+                onChange={handleFormChange}
+                className="p-2 rounded-lg bg-gray-800 border border-gray-600 text-white placeholder-gray-500 focus:ring-2 focus:ring-indigo-500"
               />
             </div>
           </div>
@@ -734,7 +755,7 @@ const UpdateProject = () => {
               <input
                 type="file"
                 ref={reraCertInputRef}
-                accept="application/pdf,image/*"
+                accept=".pdf,application/pdf,image/*"
                 className="hidden"
                 onChange={handleReraCertChange}
               />
@@ -745,6 +766,9 @@ const UpdateProject = () => {
               >
                 Upload new
               </button>
+              {reraCertificateChanged && reraCertificate && (
+                <span className="ml-2 text-sm text-gray-300">{reraCertificate.name}</span>
+              )}
             </div>
             <div>
               <label className="block text-sm text-white mb-2">OC certificate</label>
@@ -761,7 +785,7 @@ const UpdateProject = () => {
               <input
                 type="file"
                 ref={ocCertInputRef}
-                accept="application/pdf,image/*"
+                accept=".pdf,application/pdf,image/*"
                 className="hidden"
                 onChange={handleOcCertChange}
               />
@@ -772,6 +796,9 @@ const UpdateProject = () => {
               >
                 Upload new
               </button>
+              {ocCertificateChanged && ocCertificate && (
+                <span className="ml-2 text-sm text-gray-300">{ocCertificate.name}</span>
+              )}
             </div>
           </div>
 
