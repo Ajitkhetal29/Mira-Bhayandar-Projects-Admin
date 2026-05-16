@@ -1,0 +1,154 @@
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@200..700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Gilda+Display&family=Maven+Pro:wght@400..900&display=swap');
+
+/* animation for header caraousel */
+@keyframes slow-zoom {
+  0% {
+    transform: scale(1);
+  }
+
+  100% {
+    transform: scale(1.2);
+  }
+}
+
+.zoom-anim {
+  animation: slow-zoom 8s ease-in-out infinite alternate;
+}
+
+.type-cursor::after {
+  content: '|';
+  animation: blink 0.8s infinite;
+}
+
+@keyframes blink {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0;
+  }
+}
+
+/* animation for header caraousel */
+
+
+
+/* fonts */
+.oswald_span {
+  font-family: "Oswald", sans-serif;
+  font-optical-sizing: auto;
+
+}
+
+.font-maven {
+  font-family: "Maven Pro", sans-serif;
+  font-optical-sizing: auto;
+
+}
+
+.gilda-display-regular {
+  font-family: "Gilda Display", serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+/* fonts */
+
+
+/* animation foe brand caraousel */
+@keyframes scroll {
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+
+@keyframes slide-up-fade {
+  0% {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.slide-up-fade {
+  animation: slide-up-fade 0.8s ease-out forwards;
+}
+
+/* animation foe brand caraousel */
+
+
+/* animation for properties */
+
+@keyframes fadeInFromTop {
+  0% {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-item {
+  opacity: 1;
+  transform: translateY(-30px);
+  transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+}
+
+.fade-item.show {
+  opacity: 1;
+  transform: translateY(0);
+  animation: fadeInFromTop 0.8s ease forwards;
+}
+
+
+@keyframes slideInFromLeft {
+  0% {
+    opacity: 0;
+    transform: translateX(-40px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInFromRight {
+  0% {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.fade-img-left,
+.fade-img-right {
+  opacity: 0;                    
+  transform: translateX(0);       
+  will-change: transform, opacity;
+}
+
+.fade-img-left.show {
+  animation: slideInFromLeft 0.9s ease-out forwards;
+}
+.fade-img-right.show {
+  animation: slideInFromRight 0.9s ease-out forwards;
+}
