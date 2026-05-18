@@ -4,6 +4,10 @@ import { useParams } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { resolveAssetUrl } from "../utils/resolveAssetUrl";
+import {
+  galleryTitleFromFile,
+  uploadProjectFilesToS3,
+} from "../utils/s3Upload";
 
 const PROJECT_STATUSES = ["Under Construction", "Ready to Move"];
 
@@ -324,56 +328,103 @@ const UpdateProject = () => {
     }
     setSubmitting(true);
     try {
-      const fd = new FormData();
-      fd.append("id", id);
-      fd.append("name", form.name);
-      fd.append("builder", form.builder);
-      fd.append("location", form.location);
-      fd.append("status", form.status);
-      fd.append("contactNumber", form.contactNumber.trim());
-      fd.append("latitude", form.latitude.trim());
-      fd.append("longitude", form.longitude.trim());
-      fd.append("description", form.description);
-      fd.append("reraNo", form.reraNo.trim());
-      fd.append("reraMonth", form.reraMonth || "");
-      fd.append("reraYear", form.reraYear || "");
-      fd.append("features", JSON.stringify(features));
-      fd.append("pdfChanged", String(pdfChanged));
-      fd.append("logoChanged", String(logoChanged));
-      fd.append("coverImageChanged", String(coverImageChanged));
-      fd.append("bannerImageChanged", String(bannerImageChanged));
-      fd.append("coverVideoChanged", String(coverVideoChanged));
-      fd.append("reraCertificateChanged", String(reraCertificateChanged));
-      fd.append("ocCertificateChanged", String(ocCertificateChanged));
-
-      if (browcherPdf && pdfChanged) fd.append("browcherPdf", browcherPdf);
-      if (logoChanged && logo instanceof File) fd.append("logo", logo);
+      const uploadEntries = [];
+      if (pdfChanged && browcherPdf instanceof File)
+        uploadEntries.push({ field: "browcherPdf", file: browcherPdf });
+      if (logoChanged && logo instanceof File)
+        uploadEntries.push({ field: "logo", file: logo });
       if (coverImageChanged && coverImage instanceof File)
-        fd.append("coverImage", coverImage);
+        uploadEntries.push({ field: "coverImage", file: coverImage });
       if (bannerImageChanged && bannerImage instanceof File)
-        fd.append("bannerImage", bannerImage);
+        uploadEntries.push({ field: "bannerImage", file: bannerImage });
       if (coverVideoChanged && coverVideo instanceof File)
-        fd.append("coverVideo", coverVideo);
-      if (reraCertificateChanged && reraCertificate)
-        fd.append("reraCertificate", reraCertificate);
-      if (ocCertificateChanged && ocCertificate)
-        fd.append("ocCertificate", ocCertificate);
-
-      fd.append("galleryImages", JSON.stringify(galleryImages || []));
-      newGalleryImages.forEach((img) => fd.append("galleryNewImages", img.file));
-
-      fd.append("layouts", JSON.stringify(layouts || []));
-      fd.append(
-        "newLayouts",
-        JSON.stringify(
-          (newLayouts || []).map(({ title, area, price }) => ({ title, area, price }))
-        )
+        uploadEntries.push({ field: "coverVideo", file: coverVideo });
+      if (reraCertificateChanged && reraCertificate instanceof File)
+        uploadEntries.push({ field: "reraCertificate", file: reraCertificate });
+      if (ocCertificateChanged && ocCertificate instanceof File)
+        uploadEntries.push({ field: "ocCertificate", file: ocCertificate });
+      newGalleryImages.forEach((img) =>
+        uploadEntries.push({ field: "galleryNewImages", file: img.file })
       );
-      newLayouts.forEach((l) => l.image && fd.append("newlayoutImages", l.image));
+      newLayouts.forEach((l) => {
+        if (l.image instanceof File)
+          uploadEntries.push({ field: "newlayoutImages", file: l.image });
+      });
+
+      const uploaded =
+        uploadEntries.length > 0
+          ? await uploadProjectFilesToS3(backendUrl, form.name.trim(), uploadEntries)
+          : [];
+
+      const firstUrl = (field) =>
+        uploaded.find((u) => u.field === field)?.publicUrl;
+
+      const newGalleryPaths = uploaded
+        .filter((u) => u.field === "galleryNewImages")
+        .map((u) => ({
+          title: galleryTitleFromFile(u.file),
+          image: u.publicUrl,
+        }));
+
+      const newLayoutImageUrls = uploaded
+        .filter((u) => u.field === "newlayoutImages")
+        .map((u) => u.publicUrl);
+
+      let newLayoutUrlIdx = 0;
+      const newLayoutsPayload = (newLayouts || []).map((l) => {
+        const row = { title: l.title, area: l.area, price: l.price, image: "" };
+        if (l.image instanceof File) {
+          row.image = newLayoutImageUrls[newLayoutUrlIdx++] || "";
+        } else if (typeof l.image === "string") {
+          row.image = l.image;
+        }
+        return row;
+      });
+
+      const payload = {
+        id,
+        name: form.name,
+        builder: form.builder,
+        location: form.location,
+        status: form.status,
+        contactNumber: form.contactNumber.trim(),
+        latitude: form.latitude.trim(),
+        longitude: form.longitude.trim(),
+        description: form.description,
+        reraNo: form.reraNo.trim(),
+        reraMonth: form.reraMonth || "",
+        reraYear: form.reraYear || "",
+        features,
+        pdfChanged,
+        logoChanged,
+        coverImageChanged,
+        bannerImageChanged,
+        coverVideoChanged,
+        reraCertificateChanged,
+        ocCertificateChanged,
+        galleryImages: galleryImages || [],
+        galleryNewImages: newGalleryPaths,
+        layouts: layouts || [],
+        newLayouts: newLayoutsPayload,
+      };
+
+      if (pdfChanged) payload.browcherPdf = firstUrl("browcherPdf") || browcherPdf;
+      if (logoChanged) payload.logo = firstUrl("logo") || logo;
+      if (coverImageChanged)
+        payload.coverImage = firstUrl("coverImage") || coverImage;
+      if (bannerImageChanged)
+        payload.bannerImage = firstUrl("bannerImage") || bannerImage;
+      if (coverVideoChanged)
+        payload.coverVideo = firstUrl("coverVideo") || coverVideo;
+      if (reraCertificateChanged)
+        payload.reraCertificate = firstUrl("reraCertificate") || reraCertificate;
+      if (ocCertificateChanged)
+        payload.ocCertificate = firstUrl("ocCertificate") || ocCertificate;
 
       const response = await axios.post(
         `${backendUrl}/api/project/updateProject`,
-        fd
+        payload,
+        { timeout: 60_000 }
       );
       if (response.data.success) {
         toast.success("Project Updated Successfully", { autoClose: 2000 });

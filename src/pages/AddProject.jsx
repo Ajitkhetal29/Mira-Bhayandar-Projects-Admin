@@ -2,6 +2,10 @@ import React, { useContext, useEffect, useRef, useState } from "react";
 import { AppConetxt } from "../context/context";
 import axios from "axios";
 import { toast } from "react-toastify";
+import {
+  galleryTitleFromFile,
+  uploadProjectFilesToS3,
+} from "../utils/s3Upload";
 
 const PROJECT_STATUSES = ["Under Construction", "Ready to Move"];
 
@@ -191,39 +195,74 @@ const AddProject = () => {
 
     setSubmitting(true);
     try {
-      const fd = new FormData();
-      fd.append("name", form.name);
-      fd.append("builder", form.builder);
-      fd.append("location", form.location);
-      fd.append("status", form.status);
-      fd.append("contactNumber", form.contactNumber.trim());
-      fd.append("latitude", form.latitude.trim());
-      fd.append("longitude", form.longitude.trim());
-      fd.append("description", form.description);
-      fd.append("reraNo", form.reraNo.trim());
-      fd.append("reraMonth", form.reraMonth || "");
-      fd.append("reraYear", form.reraYear || "");
-      fd.append("features", JSON.stringify(features));
-      if (browcherPdf) fd.append("browcherPdf", browcherPdf);
-      fd.append("logo", logo);
-      if (coverImage) fd.append("coverImage", coverImage);
-      if (coverVideo) fd.append("coverVideo", coverVideo);
-      if (bannerImage) fd.append("bannerImage", bannerImage);
-      if (reraCertificate) fd.append("reraCertificate", reraCertificate);
-      if (ocCertificate) fd.append("ocCertificate", ocCertificate);
-      galleryImages.forEach((g) => fd.append("galleryImages", g.file));
-      fd.append(
-        "layouts",
-        JSON.stringify(
-          completeLayouts.map(({ title, area, price }) => ({ title, area, price }))
-        )
+      const uploadEntries = [
+        { field: "logo", file: logo },
+        ...(coverImage ? [{ field: "coverImage", file: coverImage }] : []),
+        ...(coverVideo ? [{ field: "coverVideo", file: coverVideo }] : []),
+        ...(bannerImage ? [{ field: "bannerImage", file: bannerImage }] : []),
+        ...(browcherPdf ? [{ field: "browcherPdf", file: browcherPdf }] : []),
+        ...(reraCertificate ? [{ field: "reraCertificate", file: reraCertificate }] : []),
+        ...(ocCertificate ? [{ field: "ocCertificate", file: ocCertificate }] : []),
+        ...galleryImages.map((g) => ({ field: "galleryImages", file: g.file })),
+        ...completeLayouts.map((l) => ({
+          field: "layoutImages",
+          file: l.imageFile,
+        })),
+      ];
+
+      const uploaded = await uploadProjectFilesToS3(
+        backendUrl,
+        form.name.trim(),
+        uploadEntries
       );
-      completeLayouts.forEach((l) => l.imageFile && fd.append("layoutImages", l.imageFile));
+
+      const urlByField = (field) => {
+        const hits = uploaded.filter((u) => u.field === field);
+        return hits.map((h) => h.publicUrl);
+      };
+
+      const logoUrls = urlByField("logo");
+      const galleryUrls = uploaded
+        .filter((u) => u.field === "galleryImages")
+        .map((u) => ({
+          title: galleryTitleFromFile(u.file),
+          image: u.publicUrl,
+        }));
+      const layoutImageUrls = urlByField("layoutImages");
+
+      const layoutsPayload = completeLayouts.map((l, i) => ({
+        title: l.title,
+        area: l.area,
+        price: l.price,
+        image: layoutImageUrls[i],
+      }));
 
       const response = await axios.post(
         `${backendUrl}/api/project/addProject`,
-        fd,
-        { timeout: 600_000 }
+        {
+          name: form.name,
+          builder: form.builder,
+          location: form.location,
+          status: form.status,
+          contactNumber: form.contactNumber.trim(),
+          latitude: form.latitude.trim(),
+          longitude: form.longitude.trim(),
+          description: form.description,
+          reraNo: form.reraNo.trim(),
+          reraMonth: form.reraMonth || "",
+          reraYear: form.reraYear || "",
+          features,
+          logo: logoUrls[0],
+          coverImage: urlByField("coverImage")[0] || "",
+          coverVideo: urlByField("coverVideo")[0] || "",
+          bannerImage: urlByField("bannerImage")[0] || "",
+          browcherPdf: urlByField("browcherPdf")[0] || "",
+          reraCertificate: urlByField("reraCertificate")[0] || "",
+          ocCertificate: urlByField("ocCertificate")[0] || "",
+          galleryImages: galleryUrls,
+          layouts: layoutsPayload,
+        },
+        { timeout: 60_000 }
       );
       if (response.data?.success) {
         toast.success("Project Added Successfully", { autoClose: 2000 });
@@ -235,8 +274,10 @@ const AddProject = () => {
       console.error(error);
       const msg =
         error.code === "ECONNABORTED"
-          ? "Upload timed out — try smaller files or check the server"
-          : error.response?.data?.message || error.message || "Error saving project";
+          ? "Upload timed out — try again or use smaller files"
+          : error.response?.status === 403
+            ? "S3 blocked the upload — add CORS on your bucket for this admin domain"
+            : error.response?.data?.message || error.message || "Error saving project";
       toast.error(msg);
     } finally {
       setSubmitting(false);
