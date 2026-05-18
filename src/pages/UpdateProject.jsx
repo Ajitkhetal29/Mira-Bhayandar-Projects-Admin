@@ -8,6 +8,11 @@ import {
   galleryTitleFromFile,
   uploadProjectFilesToS3,
 } from "../utils/s3Upload";
+import FilePreviewCard from "../components/FilePreviewCard";
+
+const resetFileInput = (ref) => {
+  if (ref?.current) ref.current.value = "";
+};
 
 const PROJECT_STATUSES = ["Under Construction", "Ready to Move"];
 
@@ -247,6 +252,174 @@ const UpdateProject = () => {
     if (!file) return;
     setOcCertificate(file);
     setOcCertificateChanged(true);
+    e.target.value = null;
+  };
+
+  const clearLogo = () => {
+    if (logoPreview) URL.revokeObjectURL(logoPreview);
+    setLogoPreview(null);
+    setLogo(editableProject?.logo ?? null);
+    setLogoChanged(false);
+    resetFileInput(logoInputRef);
+  };
+
+  const clearCoverImage = () => {
+    if (coverImagePreview) URL.revokeObjectURL(coverImagePreview);
+    setCoverImagePreview(null);
+    if (coverImage instanceof File) {
+      setCoverImage(editableProject?.coverImage ?? null);
+      setCoverImageChanged(false);
+    } else {
+      setCoverImage("");
+      setCoverImageChanged(true);
+    }
+    resetFileInput(coverImageInputRef);
+  };
+
+  const clearBannerImage = () => {
+    if (bannerImagePreview) URL.revokeObjectURL(bannerImagePreview);
+    setBannerImagePreview(null);
+    if (bannerImage instanceof File) {
+      setBannerImage(editableProject?.bannerImage ?? "");
+      setBannerImageChanged(false);
+    } else {
+      setBannerImage("");
+      setBannerImageChanged(true);
+    }
+    resetFileInput(bannerImageInputRef);
+  };
+
+  const clearCoverVideo = () => {
+    if (coverVideoPreview) URL.revokeObjectURL(coverVideoPreview);
+    setCoverVideoPreview(null);
+    if (coverVideo instanceof File) {
+      setCoverVideo(editableProject?.coverVideo ?? "");
+      setCoverVideoChanged(false);
+    } else {
+      setCoverVideo("");
+      setCoverVideoChanged(true);
+    }
+    resetFileInput(coverVideoInputRef);
+  };
+
+  const clearBrochure = () => {
+    if (browcherPdf instanceof File) {
+      setBrowcherPdf(editableProject?.browcherPdf ?? "");
+      setPdfChanged(false);
+    } else {
+      setBrowcherPdf("");
+      setPdfChanged(true);
+    }
+    resetFileInput(browcherPdfInputRef);
+  };
+
+  const clearReraCertificate = () => {
+    if (reraCertificate instanceof File) {
+      setReraCertificate(null);
+      setReraCertificateChanged(false);
+    } else {
+      setReraCertificate("");
+      setReraCertificateChanged(true);
+    }
+    resetFileInput(reraCertInputRef);
+  };
+
+  const clearOcCertificate = () => {
+    if (ocCertificate instanceof File) {
+      setOcCertificate(null);
+      setOcCertificateChanged(false);
+    } else {
+      setOcCertificate("");
+      setOcCertificateChanged(true);
+    }
+    resetFileInput(ocCertInputRef);
+  };
+
+  const clearLayoutImage = (row, isNew) => {
+    const inputId = `layoutInput-${isNew ? row.id : row._id}`;
+    if (isNew) {
+      setNewLayouts((prev) =>
+        prev.map((l) => {
+          if (l.id !== row.id) return l;
+          if (l.imagePreview) URL.revokeObjectURL(l.imagePreview);
+          return { ...l, image: null, imagePreview: null };
+        })
+      );
+    } else {
+      setLayouts((prev) =>
+        prev.map((l) => (l._id === row._id ? { ...l, image: "" } : l))
+      );
+    }
+    const input = document.getElementById(inputId);
+    if (input) input.value = "";
+  };
+
+  const coverImageDisplaySrc = () => {
+    if (coverImageChanged && coverImage instanceof File && coverImagePreview)
+      return coverImagePreview;
+    if (coverImageChanged && coverImage === "") return null;
+    const path = coverImageChanged
+      ? typeof coverImage === "string"
+        ? coverImage
+        : editableProject?.coverImage
+      : coverImage || editableProject?.coverImage;
+    return path ? asset(path) : null;
+  };
+
+  const bannerImageDisplaySrc = () => {
+    if (bannerImageChanged && bannerImage instanceof File && bannerImagePreview)
+      return bannerImagePreview;
+    if (bannerImageChanged && bannerImage === "") return null;
+    const path = bannerImageChanged
+      ? typeof bannerImage === "string"
+        ? bannerImage
+        : editableProject?.bannerImage
+      : bannerImage || editableProject?.bannerImage;
+    return path ? asset(path) : null;
+  };
+
+  const coverVideoDisplaySrc = () => {
+    if (coverVideoChanged && coverVideo instanceof File && coverVideoPreview)
+      return coverVideoPreview;
+    if (coverVideoChanged && coverVideo === "") return null;
+    const path = coverVideoChanged
+      ? typeof coverVideo === "string"
+        ? coverVideo
+        : editableProject?.coverVideo
+      : coverVideo || editableProject?.coverVideo;
+    return path ? asset(path) : null;
+  };
+
+  const brochureDisplayName = () => {
+    if (pdfChanged && browcherPdf instanceof File) return browcherPdf.name;
+    if (pdfChanged && browcherPdf === "") return null;
+    const path = pdfChanged
+      ? typeof browcherPdf === "string"
+        ? browcherPdf
+        : editableProject?.browcherPdf
+      : browcherPdf || editableProject?.browcherPdf;
+    if (!path) return null;
+    if (typeof path === "string") {
+      const parts = path.split("/");
+      return parts[parts.length - 1] || path;
+    }
+    return path.name;
+  };
+
+  const reraDisplayName = () => {
+    if (reraCertificateChanged && reraCertificate instanceof File)
+      return reraCertificate.name;
+    if (reraCertificateChanged && reraCertificate === "") return null;
+    if (reraCertificateChanged) return null;
+    return editableProject?.reraCertificate ? "Current file" : null;
+  };
+
+  const ocDisplayName = () => {
+    if (ocCertificateChanged && ocCertificate instanceof File)
+      return ocCertificate.name;
+    if (ocCertificateChanged && ocCertificate === "") return null;
+    if (ocCertificateChanged) return null;
+    return editableProject?.ocCertificate ? "Current file" : null;
   };
 
   const handleAddLayout = () => {
@@ -306,12 +479,17 @@ const UpdateProject = () => {
     const file = e.target.files?.[0];
     if (!file) return;
     setNewLayouts((prev) =>
-      prev.map((l) =>
-        l.id === lid
-          ? { ...l, image: file, imagePreview: URL.createObjectURL(file) }
-          : l
-      )
+      prev.map((l) => {
+        if (l.id !== lid) return l;
+        if (l.imagePreview) URL.revokeObjectURL(l.imagePreview);
+        return {
+          ...l,
+          image: file,
+          imagePreview: URL.createObjectURL(file),
+        };
+      })
     );
+    e.target.value = null;
   };
 
   const discard = () => navigate("/allProjects");
@@ -417,9 +595,15 @@ const UpdateProject = () => {
       if (coverVideoChanged)
         payload.coverVideo = firstUrl("coverVideo") || coverVideo;
       if (reraCertificateChanged)
-        payload.reraCertificate = firstUrl("reraCertificate") || reraCertificate;
+        payload.reraCertificate =
+          firstUrl("reraCertificate") ||
+          (typeof reraCertificate === "string" ? reraCertificate : "") ||
+          "";
       if (ocCertificateChanged)
-        payload.ocCertificate = firstUrl("ocCertificate") || ocCertificate;
+        payload.ocCertificate =
+          firstUrl("ocCertificate") ||
+          (typeof ocCertificate === "string" ? ocCertificate : "") ||
+          "";
 
       const response = await axios.post(
         `${backendUrl}/api/project/updateProject`,
@@ -444,8 +628,8 @@ const UpdateProject = () => {
     return <p className="text-center mt-4 text-gray-300">Loading project…</p>;
 
   return (
-    <div className="min-h-screen p-5 flex items-center justify-center bg-gray-900">
-      <div className="bg-black backdrop-blur-md border border-gray-700 rounded-2xl shadow-2xl p-6 max-w-5xl w-full space-y-6">
+    <div className="admin-page">
+      <div className="admin-form-card max-w-5xl mx-auto space-y-6">
         <h1 className="text-3xl font-extrabold text-center text-white">
           ✏️ Update Project
         </h1>
@@ -638,13 +822,6 @@ const UpdateProject = () => {
 
           <div className="flex flex-wrap gap-2 items-center">
             <label className="text-gray-200">Brochure</label>
-            {!pdfChanged ? (
-              <span className="text-sm text-white truncate max-w-xs">
-                {typeof browcherPdf === "string" ? browcherPdf : browcherPdf?.name}
-              </span>
-            ) : (
-              <span className="text-sm text-white">{browcherPdf?.name}</span>
-            )}
             <input
               type="file"
               ref={browcherPdfInputRef}
@@ -659,6 +836,17 @@ const UpdateProject = () => {
             >
               Replace PDF
             </button>
+            {brochureDisplayName() && (
+              <FilePreviewCard
+                onRemove={clearBrochure}
+                ariaLabel="Remove brochure"
+                className="max-w-[220px]"
+              >
+                <p className="truncate px-3 py-2 text-sm text-gray-200">
+                  {brochureDisplayName()}
+                </p>
+              </FilePreviewCard>
+            )}
           </div>
 
           <div>
@@ -679,14 +867,20 @@ const UpdateProject = () => {
                 Replace logo
               </button>
               {logoChanged && logoPreview ? (
-                <img src={logoPreview} className="h-24 rounded border border-gray-600" alt="" />
-              ) : (
+                <FilePreviewCard onRemove={clearLogo} ariaLabel="Remove new logo">
+                  <img
+                    src={logoPreview}
+                    className="h-24 w-32 object-cover"
+                    alt=""
+                  />
+                </FilePreviewCard>
+              ) : logo ? (
                 <img
                   src={asset(logo)}
-                  className="h-24 rounded border border-gray-600 object-cover"
+                  className="h-24 w-32 rounded border border-gray-600 object-cover"
                   alt=""
                 />
-              )}
+              ) : null}
             </div>
           </div>
 
@@ -707,19 +901,18 @@ const UpdateProject = () => {
               >
                 Replace cover
               </button>
-              {coverImageChanged && coverImagePreview ? (
-                <img
-                  src={coverImagePreview}
-                  className="h-24 rounded border border-gray-600 object-cover"
-                  alt=""
-                />
-              ) : (
-                <img
-                  src={asset(coverImage)}
-                  className="h-24 rounded border border-gray-600 object-cover"
-                  alt=""
-                />
-              )}
+              {coverImageDisplaySrc() ? (
+                <FilePreviewCard
+                  onRemove={clearCoverImage}
+                  ariaLabel="Remove cover image"
+                >
+                  <img
+                    src={coverImageDisplaySrc()}
+                    className="h-24 w-32 object-cover"
+                    alt=""
+                  />
+                </FilePreviewCard>
+              ) : null}
             </div>
           </div>
 
@@ -742,18 +935,17 @@ const UpdateProject = () => {
               >
                 Replace banner
               </button>
-              {bannerImageChanged && bannerImagePreview ? (
-                <img
-                  src={bannerImagePreview}
-                  className="h-24 rounded border border-gray-600 object-cover"
-                  alt=""
-                />
-              ) : bannerImage ? (
-                <img
-                  src={asset(bannerImage)}
-                  className="h-24 rounded border border-gray-600 object-cover"
-                  alt=""
-                />
+              {bannerImageDisplaySrc() ? (
+                <FilePreviewCard
+                  onRemove={clearBannerImage}
+                  ariaLabel="Remove banner image"
+                >
+                  <img
+                    src={bannerImageDisplaySrc()}
+                    className="h-24 w-32 object-cover"
+                    alt=""
+                  />
+                </FilePreviewCard>
               ) : (
                 <p className="text-gray-500 text-sm">No banner image</p>
               )}
@@ -776,14 +968,18 @@ const UpdateProject = () => {
             >
               Replace cover video
             </button>
-            {coverVideoChanged && coverVideoPreview ? (
-              <video src={coverVideoPreview} className="mt-2 h-32 rounded border border-gray-600" controls />
-            ) : editableProject.coverVideo ? (
-              <video
-                src={asset(editableProject.coverVideo)}
-                className="mt-2 h-32 rounded border border-gray-600"
-                controls
-              />
+            {coverVideoDisplaySrc() ? (
+              <FilePreviewCard
+                onRemove={clearCoverVideo}
+                ariaLabel="Remove cover video"
+                className="mt-2 block max-w-md"
+              >
+                <video
+                  src={coverVideoDisplaySrc()}
+                  className="h-32 w-full object-cover"
+                  controls
+                />
+              </FilePreviewCard>
             ) : (
               <p className="text-gray-500 text-sm mt-1">No cover video</p>
             )}
@@ -793,16 +989,6 @@ const UpdateProject = () => {
           <div className="grid md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm text-white mb-2">RERA certificate</label>
-              {editableProject.reraCertificate && !reraCertificateChanged && (
-                <a
-                  href={asset(editableProject.reraCertificate)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-amber-400 text-sm block mb-2"
-                >
-                  Current file
-                </a>
-              )}
               <input
                 type="file"
                 ref={reraCertInputRef}
@@ -817,22 +1003,32 @@ const UpdateProject = () => {
               >
                 Upload new
               </button>
-              {reraCertificateChanged && reraCertificate && (
-                <span className="ml-2 text-sm text-gray-300">{reraCertificate.name}</span>
+              {reraDisplayName() && (
+                <FilePreviewCard
+                  onRemove={clearReraCertificate}
+                  ariaLabel="Remove RERA certificate"
+                  className="mt-2 inline-block max-w-[220px]"
+                >
+                  {reraCertificateChanged &&
+                  reraCertificate instanceof File ? (
+                    <p className="truncate px-3 py-2 text-sm text-gray-200">
+                      {reraCertificate.name}
+                    </p>
+                  ) : (
+                    <a
+                      href={asset(editableProject.reraCertificate)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block truncate px-3 py-2 text-sm text-amber-400 hover:underline"
+                    >
+                      Current file
+                    </a>
+                  )}
+                </FilePreviewCard>
               )}
             </div>
             <div>
               <label className="block text-sm text-white mb-2">OC certificate</label>
-              {editableProject.ocCertificate && !ocCertificateChanged && (
-                <a
-                  href={asset(editableProject.ocCertificate)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-amber-400 text-sm block mb-2"
-                >
-                  Current file
-                </a>
-              )}
               <input
                 type="file"
                 ref={ocCertInputRef}
@@ -847,8 +1043,27 @@ const UpdateProject = () => {
               >
                 Upload new
               </button>
-              {ocCertificateChanged && ocCertificate && (
-                <span className="ml-2 text-sm text-gray-300">{ocCertificate.name}</span>
+              {ocDisplayName() && (
+                <FilePreviewCard
+                  onRemove={clearOcCertificate}
+                  ariaLabel="Remove OC certificate"
+                  className="mt-2 inline-block max-w-[220px]"
+                >
+                  {ocCertificateChanged && ocCertificate instanceof File ? (
+                    <p className="truncate px-3 py-2 text-sm text-gray-200">
+                      {ocCertificate.name}
+                    </p>
+                  ) : (
+                    <a
+                      href={asset(editableProject.ocCertificate)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block truncate px-3 py-2 text-sm text-amber-400 hover:underline"
+                    >
+                      Current file
+                    </a>
+                  )}
+                </FilePreviewCard>
               )}
             </div>
           </div>
@@ -994,17 +1209,21 @@ const UpdateProject = () => {
                   >
                     {isNew ? "Change image" : "Change image"}
                   </button>
-                  {(l.imagePreview || l.image) && (
-                    <img
-                      src={
-                        l.imagePreview ||
-                        (typeof l.image === "string"
-                          ? asset(l.image)
-                          : "")
-                      }
-                      alt=""
-                      className="w-40 h-40 object-cover rounded-xl border border-gray-600 mb-2"
-                    />
+                  {(l.imagePreview || (l.image && l.image !== "")) && (
+                    <FilePreviewCard
+                      onRemove={() => clearLayoutImage(l, isNew)}
+                      ariaLabel="Remove layout image"
+                      className="mb-2 inline-block"
+                    >
+                      <img
+                        src={
+                          l.imagePreview ||
+                          (typeof l.image === "string" ? asset(l.image) : "")
+                        }
+                        alt=""
+                        className="h-40 w-40 object-cover"
+                      />
+                    </FilePreviewCard>
                   )}
                   <button
                     type="button"

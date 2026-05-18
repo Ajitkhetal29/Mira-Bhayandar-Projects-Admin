@@ -6,6 +6,11 @@ import {
   galleryTitleFromFile,
   uploadProjectFilesToS3,
 } from "../utils/s3Upload";
+import FilePreviewCard from "../components/FilePreviewCard";
+
+const resetFileInput = (ref) => {
+  if (ref?.current) ref.current.value = "";
+};
 
 const PROJECT_STATUSES = ["Under Construction", "Ready to Move"];
 
@@ -56,6 +61,7 @@ const AddProject = () => {
   const [coverImagePreview, setCoverImagePreview] = useState(null);
   const coverImageInputRef = useRef(null);
   const [coverVideo, setCoverVideo] = useState(null);
+  const [coverVideoPreview, setCoverVideoPreview] = useState(null);
   const coverVideoInputRef = useRef(null);
   const [bannerImage, setBannerImage] = useState(null);
   const [bannerImagePreview, setBannerImagePreview] = useState(null);
@@ -98,7 +104,7 @@ const AddProject = () => {
 
   const onCoverImageButtonClick = () => coverImageInputRef.current?.click();
   const handleCoverImageChange = (e) => {
-    URL.revokeObjectURL(coverImagePreview);
+    if (coverImagePreview) URL.revokeObjectURL(coverImagePreview);
     const file = e.target.files?.[0];
     setCoverImagePreview(file ? URL.createObjectURL(file) : null);
     setCoverImage(file || null);
@@ -116,7 +122,7 @@ const AddProject = () => {
 
   const onLogoButtonClick = () => logoInputRef.current?.click();
   const handleLogoChange = (e) => {
-    URL.revokeObjectURL(logoPreview);
+    if (logoPreview) URL.revokeObjectURL(logoPreview);
     const file = e.target.files?.[0];
     setLogoPreview(file ? URL.createObjectURL(file) : null);
     setLogo(file || null);
@@ -148,21 +154,79 @@ const AddProject = () => {
   const handleLayoutImage = (id, e) => {
     const file = e.target.files?.[0];
     setLayouts((prev) =>
-      prev.map((l) =>
-        l.id === id
-          ? {
-              ...l,
-              imageFile: file || null,
-              imagePreview: file ? URL.createObjectURL(file) : null,
-            }
-          : l
-      )
+      prev.map((l) => {
+        if (l.id !== id) return l;
+        if (l.imagePreview) URL.revokeObjectURL(l.imagePreview);
+        return {
+          ...l,
+          imageFile: file || null,
+          imagePreview: file ? URL.createObjectURL(file) : null,
+        };
+      })
     );
     e.target.value = null;
   };
 
+  const clearLayoutImage = (id) => {
+    setLayouts((prev) =>
+      prev.map((l) => {
+        if (l.id !== id) return l;
+        if (l.imagePreview) URL.revokeObjectURL(l.imagePreview);
+        return { ...l, imageFile: null, imagePreview: null };
+      })
+    );
+    const input = document.getElementById(`layout-img-${id}`);
+    if (input) input.value = "";
+  };
+
+  const clearLogo = () => {
+    if (logoPreview) URL.revokeObjectURL(logoPreview);
+    setLogo(null);
+    setLogoPreview(null);
+    resetFileInput(logoInputRef);
+  };
+
+  const clearCoverImage = () => {
+    if (coverImagePreview) URL.revokeObjectURL(coverImagePreview);
+    setCoverImage(null);
+    setCoverImagePreview(null);
+    resetFileInput(coverImageInputRef);
+  };
+
+  const clearBannerImage = () => {
+    if (bannerImagePreview) URL.revokeObjectURL(bannerImagePreview);
+    setBannerImage(null);
+    setBannerImagePreview(null);
+    resetFileInput(bannerImageInputRef);
+  };
+
+  const clearCoverVideo = () => {
+    if (coverVideoPreview) URL.revokeObjectURL(coverVideoPreview);
+    setCoverVideo(null);
+    setCoverVideoPreview(null);
+    resetFileInput(coverVideoInputRef);
+  };
+
+  const clearReraCertificate = () => {
+    setReraCertificate(null);
+    resetFileInput(reraCertInputRef);
+  };
+
+  const clearOcCertificate = () => {
+    setOcCertificate(null);
+    resetFileInput(ocCertInputRef);
+  };
+
+  const clearBrochure = () => {
+    setBrowcherPdf(null);
+    resetFileInput(browcherPdfInputRef);
+  };
+
   const onBrowcherButtonClick = () => browcherPdfInputRef.current?.click();
-  const HandleBrowcherChange = (e) => setBrowcherPdf(e.target.files?.[0]);
+  const HandleBrowcherChange = (e) => {
+    setBrowcherPdf(e.target.files?.[0] || null);
+    e.target.value = null;
+  };
 
   useEffect(() => {
     return () => {
@@ -170,6 +234,10 @@ const AddProject = () => {
       layouts.forEach(
         (l) => l.imagePreview && URL.revokeObjectURL(l.imagePreview)
       );
+      if (logoPreview) URL.revokeObjectURL(logoPreview);
+      if (coverImagePreview) URL.revokeObjectURL(coverImagePreview);
+      if (bannerImagePreview) URL.revokeObjectURL(bannerImagePreview);
+      if (coverVideoPreview) URL.revokeObjectURL(coverVideoPreview);
     };
   }, []);
 
@@ -273,10 +341,10 @@ const AddProject = () => {
     } catch (error) {
       console.error(error);
       const msg =
-        error.code === "ECONNABORTED"
-          ? "Upload timed out — try again or use smaller files"
-          : error.response?.status === 403
-            ? "S3 blocked the upload — add CORS on your bucket for this admin domain"
+        error.code === "S3_CORS"
+          ? error.message
+          : error.code === "ECONNABORTED"
+            ? "Upload timed out — try again or use smaller files"
             : error.response?.data?.message || error.message || "Error saving project";
       toast.error(msg);
     } finally {
@@ -285,11 +353,9 @@ const AddProject = () => {
   };
 
   return (
-    <div className="min-h-screen p-5 flex items-center justify-center bg-gray-900">
-      <div className="bg-black backdrop-blur-md border border-gray-700 rounded-2xl shadow-2xl p-6 max-w-5xl w-full space-y-6">
-        <h1 className="text-3xl font-extrabold text-center text-white">
-          🏡 Add New Project
-        </h1>
+    <div className="admin-page">
+      <div className="admin-form-card max-w-5xl mx-auto space-y-6">
+        <h1 className="admin-page-title text-center">Add New Project</h1>
 
         <form onSubmit={handleSubmitForm} className="space-y-8 text-white">
           <fieldset
@@ -476,10 +542,14 @@ const AddProject = () => {
               >
                 Upload Logo
               </button>
-              {logo && (
-                <div className="relative border border-gray-700 rounded-xl overflow-hidden bg-gray-800/70">
-                  <img src={logoPreview} className="w-full h-24 object-cover" alt="" />
-                </div>
+              {logo && logoPreview && (
+                <FilePreviewCard onRemove={clearLogo} ariaLabel="Remove logo">
+                  <img
+                    src={logoPreview}
+                    className="h-24 w-32 object-cover"
+                    alt=""
+                  />
+                </FilePreviewCard>
               )}
             </div>
           </div>
@@ -501,14 +571,17 @@ const AddProject = () => {
               >
                 Upload Cover Image
               </button>
-              {coverImage && (
-                <div className="relative border border-gray-700 rounded-xl overflow-hidden bg-gray-800/70">
+              {coverImage && coverImagePreview && (
+                <FilePreviewCard
+                  onRemove={clearCoverImage}
+                  ariaLabel="Remove cover image"
+                >
                   <img
                     src={coverImagePreview}
-                    className="w-full h-24 object-cover"
+                    className="h-24 w-32 object-cover"
                     alt=""
                   />
-                </div>
+                </FilePreviewCard>
               )}
             </div>
           </div>
@@ -532,14 +605,17 @@ const AddProject = () => {
               >
                 Upload banner image
               </button>
-              {bannerImage && (
-                <div className="relative border border-gray-700 rounded-xl overflow-hidden bg-gray-800/70">
+              {bannerImage && bannerImagePreview && (
+                <FilePreviewCard
+                  onRemove={clearBannerImage}
+                  ariaLabel="Remove banner image"
+                >
                   <img
                     src={bannerImagePreview}
-                    className="w-full h-24 object-cover"
+                    className="h-24 w-32 object-cover"
                     alt=""
                   />
-                </div>
+                </FilePreviewCard>
               )}
             </div>
           </div>
@@ -552,7 +628,12 @@ const AddProject = () => {
               accept="video/*"
               className="hidden"
               onChange={(e) => {
-                setCoverVideo(e.target.files?.[0] || null);
+                const file = e.target.files?.[0];
+                if (coverVideoPreview) URL.revokeObjectURL(coverVideoPreview);
+                setCoverVideo(file || null);
+                setCoverVideoPreview(
+                  file ? URL.createObjectURL(file) : null
+                );
                 e.target.value = null;
               }}
             />
@@ -563,8 +644,18 @@ const AddProject = () => {
             >
               Upload cover video
             </button>
-            {coverVideo && (
-              <span className="ml-3 text-sm text-gray-300">{coverVideo.name}</span>
+            {coverVideo && coverVideoPreview && (
+              <FilePreviewCard
+                onRemove={clearCoverVideo}
+                ariaLabel="Remove cover video"
+                className="mt-2 block max-w-xs"
+              >
+                <video
+                  src={coverVideoPreview}
+                  className="h-32 w-full object-cover"
+                  controls
+                />
+              </FilePreviewCard>
             )}
           </div>
 
@@ -694,7 +785,15 @@ const AddProject = () => {
                 Upload
               </button>
               {reraCertificate && (
-                <span className="ml-2 text-sm text-gray-300">{reraCertificate.name}</span>
+                <FilePreviewCard
+                  onRemove={clearReraCertificate}
+                  ariaLabel="Remove RERA certificate"
+                  className="ml-2 inline-block max-w-[220px]"
+                >
+                  <p className="truncate px-3 py-2 text-sm text-gray-200">
+                    {reraCertificate.name}
+                  </p>
+                </FilePreviewCard>
               )}
             </div>
             <div>
@@ -717,7 +816,15 @@ const AddProject = () => {
                 Upload
               </button>
               {ocCertificate && (
-                <span className="ml-2 text-sm text-gray-300">{ocCertificate.name}</span>
+                <FilePreviewCard
+                  onRemove={clearOcCertificate}
+                  ariaLabel="Remove OC certificate"
+                  className="ml-2 inline-block max-w-[220px]"
+                >
+                  <p className="truncate px-3 py-2 text-sm text-gray-200">
+                    {ocCertificate.name}
+                  </p>
+                </FilePreviewCard>
               )}
             </div>
           </div>
@@ -740,9 +847,18 @@ const AddProject = () => {
                 Upload PDF
               </button>
               {browcherPdf && (
-                <span className="text-sm truncate max-w-xs text-white" title={browcherPdf.name}>
-                  {browcherPdf.name}
-                </span>
+                <FilePreviewCard
+                  onRemove={clearBrochure}
+                  ariaLabel="Remove brochure"
+                  className="max-w-[220px]"
+                >
+                  <p
+                    className="truncate px-3 py-2 text-sm text-gray-200"
+                    title={browcherPdf.name}
+                  >
+                    {browcherPdf.name}
+                  </p>
+                </FilePreviewCard>
               )}
             </div>
           </div>
@@ -819,13 +935,17 @@ const AddProject = () => {
                     </button>
                   </div>
                   {l.imagePreview && (
-                    <div className="mb-4">
+                    <FilePreviewCard
+                      onRemove={() => clearLayoutImage(l.id)}
+                      ariaLabel="Remove layout image"
+                      className="mb-4 inline-block"
+                    >
                       <img
                         src={l.imagePreview}
                         alt={l.title || "Layout"}
-                        className="w-40 h-40 object-cover rounded-xl border border-gray-600"
+                        className="h-40 w-40 object-cover"
                       />
-                    </div>
+                    </FilePreviewCard>
                   )}
                   <button
                     type="button"
@@ -844,7 +964,7 @@ const AddProject = () => {
             <button
               type="submit"
               disabled={submitting}
-              className="px-5 py-2 bg-yellow-200 border rounded-md text-black shadow-md hover:bg-black hover:text-white transition disabled:opacity-50"
+              className="admin-btn-primary disabled:opacity-50"
             >
               {submitting ? "Saving..." : "Add Project"}
             </button>
