@@ -25,16 +25,16 @@ export default function LeadsPagination({
 
   return (
     <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-      <p className="text-sm text-gray-400">
+      <p className="text-sm text-cream-muted">
         Showing {from}–{to} of {total}
       </p>
       <div className="flex flex-wrap items-center gap-3">
-        <label className="flex items-center gap-2 text-sm text-gray-400">
+        <label className="flex items-center gap-2 text-sm text-cream-muted">
           Per page
           <select
             value={limit}
             onChange={(e) => onLimitChange(Number(e.target.value))}
-            className="rounded-md border border-neutral-700 bg-neutral-800 px-2 py-1.5 text-sm text-white"
+            className="admin-select !w-auto"
           >
             {LIMIT_OPTIONS.map((n) => (
               <option key={n} value={n}>
@@ -48,18 +48,18 @@ export default function LeadsPagination({
             type="button"
             disabled={page <= 1}
             onClick={() => onPageChange(page - 1)}
-            className="rounded-md border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-sm text-white disabled:cursor-not-allowed disabled:opacity-40 hover:bg-neutral-700"
+            className="admin-btn-secondary disabled:cursor-not-allowed disabled:opacity-40"
           >
             Prev
           </button>
-          <span className="min-w-[5rem] px-2 text-center text-sm text-gray-300">
+          <span className="min-w-[5rem] px-2 text-center text-sm text-cream">
             Page {page} / {totalPages}
           </span>
           <button
             type="button"
             disabled={page >= totalPages}
             onClick={() => onPageChange(page + 1)}
-            className="rounded-md border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-sm text-white disabled:cursor-not-allowed disabled:opacity-40 hover:bg-neutral-700"
+            className="admin-btn-secondary disabled:cursor-not-allowed disabled:opacity-40"
           >
             Next
           </button>

@@ -28,67 +28,56 @@ export default function LeadsTable({
   rowOffset = 0,
 }) {
   if (!leads?.length) {
-    return (
-      <div className="p-8 text-center text-gray-500 bg-neutral-900 border border-neutral-800 rounded-lg">
-        {emptyMessage}
-      </div>
-    );
+    return <div className="admin-card admin-empty">{emptyMessage}</div>;
   }
 
   return (
-    <div className="overflow-x-auto shadow-2xl rounded-lg bg-neutral-900 border border-neutral-800">
-      <table className="w-full text-sm text-left text-gray-300">
-        <thead className="text-xs text-gray-400 uppercase bg-neutral-800">
+    <div className="admin-table-wrap">
+      <table className="admin-table">
+        <thead>
           <tr>
-            <th className="px-6 py-4">#</th>
-            <th className="px-6 py-4">Name</th>
-            <th className="px-6 py-4">Email</th>
-            <th className="px-6 py-4">Phone</th>
-            <th className="px-6 py-4">Message</th>
-            <th className="px-6 py-4">Date</th>
-            {onDelete ? <th className="px-6 py-4 text-right">Action</th> : null}
+            <th>#</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>Message</th>
+            <th>Date</th>
+            {onDelete ? <th className="text-right">Action</th> : null}
           </tr>
         </thead>
         <tbody>
           {leads.map((lead, i) => (
-            <tr
-              key={String(lead._id)}
-              className="border-b border-neutral-800 hover:bg-neutral-800/50"
-            >
-              <td className="px-6 py-4">{rowOffset + i + 1}</td>
-              <td className="px-6 py-4 font-semibold text-white whitespace-nowrap">
-                {lead.name}
-              </td>
-              <td className="px-6 py-4">
-                <a
-                  href={`mailto:${lead.email}`}
-                  className="text-cyan-400 hover:underline"
-                >
+            <tr key={String(lead._id)}>
+              <td>{rowOffset + i + 1}</td>
+              <td className="cell-strong whitespace-nowrap">{lead.name}</td>
+              <td>
+                <a href={`mailto:${lead.email}`} className="link-gold">
                   {lead.email}
                 </a>
               </td>
-              <td className="px-6 py-4 whitespace-nowrap">
+              <td className="whitespace-nowrap">
                 <a
                   href={`tel:${String(lead.phone).replace(/\s/g, "")}`}
-                  className="text-cyan-400 hover:underline"
+                  className="link-gold"
                 >
                   {lead.phone}
                 </a>
               </td>
-              <td className="px-6 py-4 max-w-xs text-white">
-                <span className="line-clamp-2" title={String(lead.message ?? "")}>
+              <td className="max-w-xs text-cream">
+                <span
+                  className="line-clamp-2"
+                  title={String(lead.message ?? "")}
+                >
                   {lead.message}
                 </span>
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-gray-400">
-                {formatDate(lead.createdAt)}
-              </td>
+              <td className="whitespace-nowrap">{formatDate(lead.createdAt)}</td>
               {onDelete ? (
-                <td className="px-6 py-4 text-right">
+                <td className="text-right">
                   <button
                     type="button"
                     onClick={() => onDelete(String(lead._id))}
-                    className="px-4 py-1.5 text-xs bg-red-600 hover:bg-red-700 text-white rounded-md font-semibold"
+                    className="admin-btn-danger !py-1.5 !text-xs"
                   >
                     Delete
                   </button>

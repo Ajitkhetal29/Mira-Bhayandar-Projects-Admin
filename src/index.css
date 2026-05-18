@@ -1,1 +1,451 @@
 @import "tailwindcss";
+
+@theme {
+  --color-navy: #0a1628;
+  --color-navy-light: #162440;
+  --color-navy-mid: #122036;
+  --color-gold: #d4a853;
+  --color-gold-light: #e8c378;
+  --color-gold-dark: #b88f3e;
+  --color-gold-ink: #5c4518;
+  --color-cream: #f5f0e6;
+  --color-cream-muted: #c9c0b0;
+
+  --font-heading: "Fraunces", Georgia, "Times New Roman", serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+
+html {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--color-navy);
+  color: var(--color-cream);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  height: 100%;
+  min-height: 100dvh;
+}
+
+/* ——— App shell: sidebar + scrollable main ——— */
+.admin-shell {
+  display: flex;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+  background: var(--color-navy);
+}
+
+.admin-sidebar {
+  flex-shrink: 0;
+  width: 15.5rem;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-navy-light);
+  border-right: 1px solid color-mix(in srgb, var(--color-gold) 18%, transparent);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  z-index: 40;
+}
+
+.admin-sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 35;
+  backdrop-filter: blur(2px);
+}
+
+@media (max-width: 767px) {
+  .admin-sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.35);
+  }
+  .admin-sidebar.is-open {
+    transform: translateX(0);
+  }
+}
+
+.admin-main {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.admin-main-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.admin-topbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-gold) 12%, transparent);
+  background: color-mix(in srgb, var(--color-navy-light) 85%, transparent);
+  backdrop-filter: blur(8px);
+}
+
+@media (min-width: 768px) {
+  .admin-topbar {
+    display: none;
+  }
+}
+
+/* ——— Page content ——— */
+.admin-page {
+  width: 100%;
+  max-width: 80rem;
+  margin: 0 auto;
+  padding: 1.25rem 1rem 2.5rem;
+}
+
+@media (min-width: 640px) {
+  .admin-page {
+    padding: 1.75rem 1.5rem 3rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .admin-page {
+    padding: 2rem 2rem 3.5rem;
+  }
+}
+
+.admin-page-title {
+  font-family: var(--font-heading);
+  font-size: clamp(1.75rem, 4vw, 2.25rem);
+  font-weight: 600;
+  color: var(--color-cream);
+  letter-spacing: -0.02em;
+}
+
+.admin-page-subtitle {
+  margin-top: 0.35rem;
+  font-size: 0.95rem;
+  color: var(--color-cream-muted);
+}
+
+.admin-page-header {
+  margin-bottom: 1.75rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-gold) 15%, transparent);
+}
+
+.admin-card {
+  border-radius: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--color-gold) 14%, transparent);
+  background: color-mix(in srgb, var(--color-navy-light) 70%, var(--color-navy));
+}
+
+.admin-form-card {
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--color-gold) 16%, transparent);
+  background: color-mix(in srgb, var(--color-navy-light) 55%, var(--color-navy));
+  padding: 1.5rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+}
+
+@media (min-width: 640px) {
+  .admin-form-card {
+    padding: 2rem;
+  }
+}
+
+.admin-stat-card {
+  border-radius: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--color-gold) 12%, transparent);
+  background: color-mix(in srgb, var(--color-navy-light) 65%, var(--color-navy));
+  padding: 1.5rem;
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    background 0.2s ease;
+}
+
+.admin-stat-card:hover {
+  border-color: color-mix(in srgb, var(--color-gold) 35%, transparent);
+}
+
+.admin-stat-card.is-clickable {
+  cursor: pointer;
+}
+
+.admin-stat-card.is-clickable:hover {
+  transform: translateY(-2px);
+  background: color-mix(in srgb, var(--color-navy-light) 85%, var(--color-navy));
+}
+
+.admin-stat-card .accent-bar {
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    var(--color-gold-dark),
+    var(--color-gold),
+    var(--color-gold-light)
+  );
+  margin-bottom: 1rem;
+}
+
+/* ——— Nav links ——— */
+.admin-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-cream-muted);
+  transition:
+    color 0.2s ease,
+    background 0.2s ease;
+}
+
+.admin-nav-link:hover {
+  color: var(--color-cream);
+  background: color-mix(in srgb, var(--color-gold) 8%, transparent);
+}
+
+.admin-nav-link.is-active {
+  color: var(--color-navy);
+  background: linear-gradient(
+    135deg,
+    var(--color-gold) 0%,
+    var(--color-gold-light) 100%
+  );
+  font-weight: 600;
+}
+
+/* ——— Buttons ——— */
+.admin-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  padding: 0.625rem 1.25rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-navy);
+  background: linear-gradient(
+    135deg,
+    var(--color-gold) 0%,
+    var(--color-gold-light) 100%
+  );
+  border: none;
+  cursor: pointer;
+  transition:
+    filter 0.2s ease,
+    transform 0.15s ease;
+  white-space: nowrap;
+}
+
+.admin-btn-primary:hover {
+  filter: brightness(1.06);
+}
+
+.admin-btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.admin-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-cream);
+  background: color-mix(in srgb, var(--color-navy-light) 80%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-gold) 22%, transparent);
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.admin-btn-secondary:hover {
+  background: color-mix(in srgb, var(--color-gold) 12%, var(--color-navy-light));
+}
+
+.admin-btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #fff;
+  background: #b91c1c;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.admin-btn-danger:hover {
+  background: #991b1b;
+}
+
+.admin-btn-ghost {
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-cream);
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--color-cream) 25%, transparent);
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.admin-btn-ghost:hover {
+  background: color-mix(in srgb, var(--color-cream) 8%, transparent);
+}
+
+/* ——— Form controls ——— */
+.admin-input,
+.admin-textarea,
+.admin-select {
+  width: 100%;
+  border-radius: 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--color-gold) 20%, transparent);
+  background: color-mix(in srgb, var(--color-navy) 60%, var(--color-navy-light));
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  color: var(--color-cream);
+  transition: border-color 0.2s ease;
+}
+
+.admin-input::placeholder,
+.admin-textarea::placeholder {
+  color: color-mix(in srgb, var(--color-cream-muted) 70%, transparent);
+}
+
+.admin-input:focus,
+.admin-textarea:focus,
+.admin-select:focus {
+  outline: none;
+  border-color: var(--color-gold);
+}
+
+.admin-label {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-cream-muted);
+  margin-bottom: 0.35rem;
+}
+
+/* ——— Tables ——— */
+.admin-table-wrap {
+  overflow-x: auto;
+  border-radius: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--color-gold) 14%, transparent);
+  background: color-mix(in srgb, var(--color-navy-light) 50%, var(--color-navy));
+}
+
+.admin-table {
+  width: 100%;
+  font-size: 0.875rem;
+  text-align: left;
+  color: var(--color-cream-muted);
+}
+
+.admin-table thead {
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: color-mix(in srgb, var(--color-cream-muted) 85%, transparent);
+  background: color-mix(in srgb, var(--color-navy-light) 90%, var(--color-navy));
+}
+
+.admin-table th {
+  padding: 0.875rem 1.25rem;
+}
+
+.admin-table td {
+  padding: 0.875rem 1.25rem;
+  border-top: 1px solid color-mix(in srgb, var(--color-gold) 8%, transparent);
+}
+
+.admin-table tbody tr:hover {
+  background: color-mix(in srgb, var(--color-gold) 5%, transparent);
+}
+
+.admin-table .cell-strong {
+  font-weight: 500;
+  color: var(--color-cream);
+}
+
+.admin-table .link-gold {
+  color: var(--color-gold);
+  text-decoration: none;
+}
+
+.admin-table .link-gold:hover {
+  text-decoration: underline;
+}
+
+.admin-empty {
+  padding: 2rem;
+  text-align: center;
+  color: var(--color-cream-muted);
+}
+
+.text-gradient-gold {
+  background: linear-gradient(135deg, #d4a853 0%, #e8c378 50%, #b88f3e 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+/* Login (full-screen, no sidebar) */
+.admin-login-shell {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: linear-gradient(
+    160deg,
+    var(--color-navy) 0%,
+    var(--color-navy-mid) 50%,
+    var(--color-navy-light) 100%
+  );
+}
+
+.admin-login-card {
+  width: 100%;
+  max-width: 24rem;
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--color-gold) 20%, transparent);
+  background: color-mix(in srgb, var(--color-navy-light) 75%, var(--color-navy));
+  padding: 2rem 1.75rem;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
+}

@@ -74,26 +74,27 @@ const AllFaq = () => {
   };
 
   if (!allFaq) {
-    return <div>Loading...</div>;
+    return (
+      <div className="admin-page flex min-h-[40vh] items-center justify-center">
+        <p className="text-cream-muted">Loading…</p>
+      </div>
+    );
   }
 
   return (
-    <main className="bg-neutral-950 min-h-screen text-white">
-      <div className="w-full max-w-7xl mb-5 mx-auto px-4 py-10 pt-10 sm:px-6 lg:px-8">
+    <div className="admin-page">
         {/* --- Page Header --- */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
           <div>
-            <h1 className="text-3xl md:text-4xl font-extrabold text-white">
-              All FAQ's
-            </h1>
-            <p className="mt-1 text-lg text-gray-400">
-              Manage, update, or delete existing FAQ's.
+            <h1 className="admin-page-title">All FAQs</h1>
+            <p className="admin-page-subtitle">
+              Manage, update, or delete existing FAQs.
             </p>
           </div>
           <button
             type="button"
             onClick={() => setFaqFormOpen((prev) => !prev)}
-            className="bg-yellow-400 cursor-pointer hover:bg-yellow-500 text-black px-5 py-2.5 rounded-lg font-bold shadow-lg transition-colors duration-300 whitespace-nowrap"
+            className="admin-btn-primary"
           >
             + Add FAQ
           </button>
@@ -101,8 +102,8 @@ const AllFaq = () => {
 
         <div>
           {faqFormOpen && (
-            <div className="border p-4 mb-4 rounded shadow">
-              <h3 className="text-md text-center font-semibold mb-4">
+            <div className="admin-card p-5 mb-4">
+              <h3 className="text-md text-center font-semibold mb-4 text-cream">
                 Add New FAQ
               </h3>
               <div className="space-y-4">
@@ -231,8 +232,7 @@ const AllFaq = () => {
             </div>
           ))}
         </div>
-      </div>
-    </main>
+    </div>
   );
 };
 

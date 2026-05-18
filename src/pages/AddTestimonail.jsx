@@ -52,8 +52,8 @@ const AddTestimonail = () => {
   };
 
   return (
-    <div className="min-h-screen p-5 pb-15 flex items-center justify-center bg-gray-900">
-      <div className="bg-black backdrop-blur-md border border-gray-700 rounded-2xl shadow-2xl p-6 max-w-5xl w-full space-y-6">
+    <div className="admin-page">
+      <div className="admin-form-card max-w-5xl mx-auto space-y-6">
         <h1 className="text-3xl font-extrabold text-center text-white">
           Add New Testimonial
         </h1>

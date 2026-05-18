@@ -84,108 +84,78 @@ const Login = () => {
 
   if (needsBootstrap === null) {
     return (
-      <div className="flex flex-1 min-h-screen justify-center items-center bg-gradient-to-br from-gray-100 to-gray-200">
-        <p className="text-gray-600">Loading…</p>
+      <div className="admin-login-shell">
+        <p className="text-cream-muted">Loading…</p>
       </div>
     );
   }
 
   return (
-    <div
-      className="flex flex-1 justify-center items-center bg-gradient-to-br
-              from-gray-100 to-gray-200 p-4"
-    >
-      <div
-        className="flex flex-col w-full max-w-md bg-gray-900 rounded-2xl shadow-2xl
-                justify-center items-center px-6 py-12 lg:px-8"
-      >
-        <div className="sm:mx-auto sm:w-full sm:max-w-sm">
-          <img
-            alt="Your Company"
-            src="/img/logo/logo.png"
-            className="mx-auto h-10 w-auto"
-          />
-          <h2 className="mt-10 text-center text-2xl/9 font-bold text-white oswald_span">
-            {needsBootstrap ? "First admin" : "Admin Login"}
-          </h2>
-        </div>
+    <div className="admin-login-shell">
+      <div className="admin-login-card">
+        <img
+          alt="Mira Bhayandar Projects"
+          src="/img/logo/logo.png"
+          className="mx-auto h-10 w-auto"
+        />
+        <h2 className="mt-8 text-center text-2xl font-semibold text-cream font-[family-name:var(--font-heading)]">
+          {needsBootstrap ? "First admin" : "Admin Login"}
+        </h2>
 
-        <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-sm w-full">
-          <form
-            onSubmit={needsBootstrap ? handleBootstrap : handleSubmit}
-            className="space-y-6"
-          >
-            {needsBootstrap && (
-              <div>
-                <label
-                  htmlFor="secret"
-                  className="block font-bold text-sm/6 text-gray-100 maven-pro"
-                >
-                  PIN
-                </label>
-                <input
-                  id="secret"
-                  name="secret"
-                  type="password"
-                  inputMode="numeric"
-                  autoComplete="off"
-                  required
-                  placeholder="1234"
-                  onChange={handleForm}
-                  className="mt-2 block w-full rounded-md bg-white/5 px-3 py-1.5 text-base text-white outline-1 -outline-offset-1 outline-white/10 placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-500 sm:text-sm/6"
-                />
-              </div>
-            )}
+        <form
+          onSubmit={needsBootstrap ? handleBootstrap : handleSubmit}
+          className="mt-8 space-y-5"
+        >
+          {needsBootstrap && (
             <div>
-              <label
-                htmlFor="username"
-                className="block font-bold text-sm/6 text-gray-100 maven-pro"
-              >
-                Username
+              <label htmlFor="secret" className="admin-label">
+                PIN
               </label>
-              <div className="mt-2">
-                <input
-                  id="username"
-                  name="username"
-                  type="text"
-                  required
-                  placeholder="Enter Username"
-                  onChange={handleForm}
-                  className="block w-full cursor-pointer italic rounded-md bg-white/5 px-3 py-1.5 text-base text-white outline-1 -outline-offset-1 outline-white/10 placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-500 sm:text-sm/6"
-                />
-              </div>
+              <input
+                id="secret"
+                name="secret"
+                type="password"
+                inputMode="numeric"
+                autoComplete="off"
+                required
+                placeholder="1234"
+                onChange={handleForm}
+                className="admin-input"
+              />
             </div>
-
-            <div>
-              <label
-                htmlFor="password"
-                className="block text-sm/6 font-bold text-gray-100 maven-pro"
-              >
-                Password
-              </label>
-              <div className="mt-2">
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  placeholder="Enter Password"
-                  required
-                  onChange={handleForm}
-                  className="block w-full cursor-pointer italic rounded-md bg-white/5 px-3 py-1.5 text-base text-white outline-1 -outline-offset-1 outline-white/10 placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-500 sm:text-sm/6"
-                />
-              </div>
-            </div>
-
-            <div>
-              <button
-                type="submit"
-                className="flex w-full cursor-pointer maven-pro justify-center rounded-md bg-indigo-500 px-3 py-1.5 text-sm/6 font-semibold text-white hover:bg-indigo-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
-              >
-                {needsBootstrap ? "Create account" : "Login"}
-              </button>
-            </div>
-          </form>
-        </div>
+          )}
+          <div>
+            <label htmlFor="username" className="admin-label">
+              Username
+            </label>
+            <input
+              id="username"
+              name="username"
+              type="text"
+              required
+              placeholder="Enter username"
+              onChange={handleForm}
+              className="admin-input"
+            />
+          </div>
+          <div>
+            <label htmlFor="password" className="admin-label">
+              Password
+            </label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              placeholder="Enter password"
+              required
+              onChange={handleForm}
+              className="admin-input"
+            />
+          </div>
+          <button type="submit" className="admin-btn-primary w-full">
+            {needsBootstrap ? "Create account" : "Login"}
+          </button>
+        </form>
       </div>
     </div>
   );
