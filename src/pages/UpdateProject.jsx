@@ -16,6 +16,13 @@ const resetFileInput = (ref) => {
 
 const PROJECT_STATUSES = ["Under Construction", "Ready to Move"];
 
+const PROPERTY_TYPES = [
+  { value: "", label: "— Select property type —" },
+  { value: "Residential", label: "Residential" },
+  { value: "Commercial", label: "Commercial" },
+  { value: "Residential & Commercial", label: "Residential & Commercial (both)" },
+];
+
 const MONTHS = [
   "",
   "January",
@@ -44,7 +51,6 @@ const UpdateProject = () => {
   const coverImageInputRef = useRef(null);
   const bannerImageInputRef = useRef(null);
   const coverVideoInputRef = useRef(null);
-  const reraCertInputRef = useRef(null);
   const ocCertInputRef = useRef(null);
 
   const [submitting, setSubmitting] = useState(false);
@@ -54,6 +60,8 @@ const UpdateProject = () => {
     name: "",
     builder: "",
     location: "",
+    address: "",
+    propertyType: "",
     status: "Under Construction",
     contactNumber: "",
     latitude: "",
@@ -89,10 +97,24 @@ const UpdateProject = () => {
   const [coverVideoPreview, setCoverVideoPreview] = useState(null);
   const [coverVideoChanged, setCoverVideoChanged] = useState(false);
 
-  const [reraCertificate, setReraCertificate] = useState(null);
+  const [reraCertificates, setReraCertificates] = useState([]);
+  const [newReraCertificates, setNewReraCertificates] = useState([]);
+  const [reraScannerImages, setReraScannerImages] = useState([]);
+  const [newReraScannerImages, setNewReraScannerImages] = useState([]);
   const [ocCertificate, setOcCertificate] = useState(null);
-  const [reraCertificateChanged, setReraCertificateChanged] = useState(false);
   const [ocCertificateChanged, setOcCertificateChanged] = useState(false);
+
+  const loadTitledAssets = (val, urlKey) => {
+    if (!val) return [];
+    if (typeof val === "string" && val.trim()) {
+      return [{ _id: "legacy", title: "Project", [urlKey]: val.trim() }];
+    }
+    return (Array.isArray(val) ? val : []).map((x, i) => ({
+      _id: x._id || `existing-${urlKey}-${i}`,
+      title: x.title || "",
+      [urlKey]: x[urlKey] || x.file || x.image || "",
+    }));
+  };
 
   useEffect(() => {
     const found = allProjects?.find((p) => p._id === id);
@@ -102,6 +124,8 @@ const UpdateProject = () => {
         name: found.name || "",
         builder: found.builder || "",
         location: found.location || "",
+        address: found.address || "",
+        propertyType: found.propertyType || "",
         status: found.status || "Under Construction",
         contactNumber: found.contactNumber || "",
         latitude: found.latitude != null && found.latitude !== "" ? String(found.latitude) : "",
@@ -130,9 +154,11 @@ const UpdateProject = () => {
       setCoverImageChanged(false);
       setBannerImageChanged(false);
       setCoverVideoChanged(false);
-      setReraCertificate(null);
+      setReraCertificates(loadTitledAssets(found.reraCertificate, "file"));
+      setNewReraCertificates([]);
+      setReraScannerImages(loadTitledAssets(found.reraScannerImage, "image"));
+      setNewReraScannerImages([]);
       setOcCertificate(null);
-      setReraCertificateChanged(false);
       setOcCertificateChanged(false);
       setLogoPreview(null);
       setCoverImagePreview(null);
@@ -144,6 +170,8 @@ const UpdateProject = () => {
   useEffect(() => {
     return () => {
       newGalleryImages.forEach((g) => URL.revokeObjectURL(g.preview));
+      newReraCertificates.forEach((r) => r.preview && URL.revokeObjectURL(r.preview));
+      newReraScannerImages.forEach((r) => r.preview && URL.revokeObjectURL(r.preview));
       newLayouts.forEach(
         (l) => l.imagePreview && URL.revokeObjectURL(l.imagePreview)
       );
@@ -154,6 +182,8 @@ const UpdateProject = () => {
     };
   }, [
     newGalleryImages,
+    newReraCertificates,
+    newReraScannerImages,
     newLayouts,
     logoPreview,
     coverImagePreview,
@@ -240,12 +270,16 @@ const UpdateProject = () => {
     setBrowcherPdf(e.target.files?.[0]);
   };
 
-  const handleReraCertChange = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setReraCertificate(file);
-    setReraCertificateChanged(true);
-  };
+  const addNewReraCert = () =>
+    setNewReraCertificates((prev) => [
+      ...prev,
+      { id: Date.now(), title: "", file: null, preview: null },
+    ]);
+  const addNewReraScanner = () =>
+    setNewReraScannerImages((prev) => [
+      ...prev,
+      { id: Date.now(), title: "", image: null, preview: null },
+    ]);
 
   const handleOcCertChange = (e) => {
     const file = e.target.files?.[0];
@@ -311,17 +345,6 @@ const UpdateProject = () => {
       setPdfChanged(true);
     }
     resetFileInput(browcherPdfInputRef);
-  };
-
-  const clearReraCertificate = () => {
-    if (reraCertificate instanceof File) {
-      setReraCertificate(null);
-      setReraCertificateChanged(false);
-    } else {
-      setReraCertificate("");
-      setReraCertificateChanged(true);
-    }
-    resetFileInput(reraCertInputRef);
   };
 
   const clearOcCertificate = () => {
@@ -404,14 +427,6 @@ const UpdateProject = () => {
       return parts[parts.length - 1] || path;
     }
     return path.name;
-  };
-
-  const reraDisplayName = () => {
-    if (reraCertificateChanged && reraCertificate instanceof File)
-      return reraCertificate.name;
-    if (reraCertificateChanged && reraCertificate === "") return null;
-    if (reraCertificateChanged) return null;
-    return editableProject?.reraCertificate ? "Current file" : null;
   };
 
   const ocDisplayName = () => {
@@ -517,8 +532,16 @@ const UpdateProject = () => {
         uploadEntries.push({ field: "bannerImage", file: bannerImage });
       if (coverVideoChanged && coverVideo instanceof File)
         uploadEntries.push({ field: "coverVideo", file: coverVideo });
-      if (reraCertificateChanged && reraCertificate instanceof File)
-        uploadEntries.push({ field: "reraCertificate", file: reraCertificate });
+      newReraCertificates
+        .filter((r) => r.title?.trim() && r.file)
+        .forEach((r) =>
+          uploadEntries.push({ field: "newReraCertificates", file: r.file })
+        );
+      newReraScannerImages
+        .filter((r) => r.title?.trim() && r.image)
+        .forEach((r) =>
+          uploadEntries.push({ field: "newReraScannerImages", file: r.image })
+        );
       if (ocCertificateChanged && ocCertificate instanceof File)
         uploadEntries.push({ field: "ocCertificate", file: ocCertificate });
       newGalleryImages.forEach((img) =>
@@ -544,6 +567,19 @@ const UpdateProject = () => {
           image: u.publicUrl,
         }));
 
+      const completeNewReraCerts = newReraCertificates.filter(
+        (r) => r.title?.trim() && r.file
+      );
+      const newReraCertUrls = uploaded
+        .filter((u) => u.field === "newReraCertificates")
+        .map((u) => u.publicUrl);
+      const completeNewScanners = newReraScannerImages.filter(
+        (r) => r.title?.trim() && r.image
+      );
+      const newScannerUrls = uploaded
+        .filter((u) => u.field === "newReraScannerImages")
+        .map((u) => u.publicUrl);
+
       const newLayoutImageUrls = uploaded
         .filter((u) => u.field === "newlayoutImages")
         .map((u) => u.publicUrl);
@@ -564,6 +600,8 @@ const UpdateProject = () => {
         name: form.name,
         builder: form.builder,
         location: form.location,
+        address: form.address.trim(),
+        propertyType: form.propertyType,
         status: form.status,
         contactNumber: form.contactNumber.trim(),
         latitude: form.latitude.trim(),
@@ -578,8 +616,25 @@ const UpdateProject = () => {
         coverImageChanged,
         bannerImageChanged,
         coverVideoChanged,
-        reraCertificateChanged,
+        reraCertificateChanged: true,
+        reraScannerImageChanged: true,
         ocCertificateChanged,
+        reraCertificate: (reraCertificates || []).map((r) => ({
+          title: r.title.trim(),
+          file: r.file,
+        })),
+        newReraCertificates: completeNewReraCerts.map((r, i) => ({
+          title: r.title.trim(),
+          file: newReraCertUrls[i],
+        })),
+        reraScannerImage: (reraScannerImages || []).map((r) => ({
+          title: r.title.trim(),
+          image: r.image,
+        })),
+        newReraScannerImages: completeNewScanners.map((r, i) => ({
+          title: r.title.trim(),
+          image: newScannerUrls[i],
+        })),
         galleryImages: galleryImages || [],
         galleryNewImages: newGalleryPaths,
         layouts: layouts || [],
@@ -594,11 +649,6 @@ const UpdateProject = () => {
         payload.bannerImage = firstUrl("bannerImage") || bannerImage;
       if (coverVideoChanged)
         payload.coverVideo = firstUrl("coverVideo") || coverVideo;
-      if (reraCertificateChanged)
-        payload.reraCertificate =
-          firstUrl("reraCertificate") ||
-          (typeof reraCertificate === "string" ? reraCertificate : "") ||
-          "";
       if (ocCertificateChanged)
         payload.ocCertificate =
           firstUrl("ocCertificate") ||
@@ -668,6 +718,32 @@ const UpdateProject = () => {
                 onChange={handleFormChange}
                 className="p-2 rounded-lg bg-gray-800 border border-gray-600 text-white focus:ring-2 focus:ring-indigo-500"
               />
+            </div>
+            <div className="flex flex-col md:col-span-2">
+              <label className="mb-1 text-gray-200">Full address</label>
+              <textarea
+                name="address"
+                rows={2}
+                value={form.address}
+                placeholder="Dronagiri, Plot No. 84, Kaamtha Rd, Nr, Vimla Talao, New, Uran, Mumbai"
+                onChange={handleFormChange}
+                className="p-2 rounded-lg bg-gray-800 border border-gray-600 text-white placeholder-gray-500 focus:ring-2 focus:ring-indigo-500 min-h-[72px]"
+              />
+            </div>
+            <div className="flex flex-col">
+              <label className="mb-1 text-gray-200">Property type</label>
+              <select
+                name="propertyType"
+                value={form.propertyType}
+                onChange={handleFormChange}
+                className="p-2 rounded-lg bg-gray-800 border border-gray-600 text-white focus:ring-2 focus:ring-indigo-500"
+              >
+                {PROPERTY_TYPES.map(({ value, label }) => (
+                  <option key={value || "none"} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="flex flex-col">
               <label className="mb-1 text-gray-200">Status</label>
@@ -986,49 +1062,95 @@ const UpdateProject = () => {
           </div>
 
 
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm text-white mb-2">RERA certificate</label>
-              <input
-                type="file"
-                ref={reraCertInputRef}
-                accept=".pdf,application/pdf,image/*"
-                className="hidden"
-                onChange={handleReraCertChange}
-              />
-              <button
-                type="button"
-                onClick={() => reraCertInputRef.current?.click()}
-                className="px-5 py-2 bg-white border rounded-md text-black shadow-md hover:bg-black hover:text-white transition"
-              >
-                Upload new
-              </button>
-              {reraDisplayName() && (
-                <FilePreviewCard
-                  onRemove={clearReraCertificate}
-                  ariaLabel="Remove RERA certificate"
-                  className="mt-2 inline-block max-w-[220px]"
-                >
-                  {reraCertificateChanged &&
-                  reraCertificate instanceof File ? (
-                    <p className="truncate px-3 py-2 text-sm text-gray-200">
-                      {reraCertificate.name}
-                    </p>
-                  ) : (
-                    <a
-                      href={asset(editableProject.reraCertificate)}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="block truncate px-3 py-2 text-sm text-amber-400 hover:underline"
-                    >
-                      Current file
-                    </a>
-                  )}
-                </FilePreviewCard>
-              )}
+          <div>
+            <div className="flex justify-between items-center mb-4">
+              <label className="block text-sm text-white">RERA certificates</label>
+              <button type="button" onClick={addNewReraCert} className="px-5 py-2 bg-white border rounded-md text-black">Add certificate</button>
             </div>
-            <div>
-              <label className="block text-sm text-white mb-2">OC certificate</label>
+            <div className="space-y-4 mb-6">
+              {reraCertificates.map((r) => (
+                <div key={r._id} className="border border-gray-700 rounded-xl p-4 bg-gray-800/70 flex flex-wrap gap-4 items-end">
+                  <div className="flex-1 min-w-[140px]">
+                    <label className="block text-sm mb-1 text-white">Title</label>
+                    <input type="text" value={r.title} placeholder="Project, Tower A…"
+                      onChange={(e) => setReraCertificates((prev) => prev.map((x) => x._id === r._id ? { ...x, title: e.target.value } : x))}
+                      className="w-full rounded-xl border border-gray-600 bg-gray-900 px-4 py-2 text-white" />
+                  </div>
+                  <a href={asset(r.file)} target="_blank" rel="noreferrer" className="text-amber-400 text-sm hover:underline">View file</a>
+                  <button type="button" onClick={() => setReraCertificates((prev) => prev.filter((x) => x._id !== r._id))} className="px-4 py-2 bg-red-500 rounded-md text-white text-sm">Remove</button>
+                </div>
+              ))}
+              {newReraCertificates.map((r) => (
+                <div key={r.id} className="border border-gray-700 rounded-xl p-4 bg-gray-800/70 flex flex-wrap gap-4 items-end">
+                  <div className="flex-1 min-w-[140px]">
+                    <label className="block text-sm mb-1 text-white">Title (new)</label>
+                    <input type="text" value={r.title} placeholder="Project, Tower A…"
+                      onChange={(e) => setNewReraCertificates((prev) => prev.map((x) => x.id === r.id ? { ...x, title: e.target.value } : x))}
+                      className="w-full rounded-xl border border-gray-600 bg-gray-900 px-4 py-2 text-white" />
+                  </div>
+                  <input type="file" accept=".pdf,application/pdf,image/*" id={`new-rera-cert-${r.id}`} className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setNewReraCertificates((prev) => prev.map((x) => {
+                        if (x.id !== r.id) return x;
+                        if (x.preview) URL.revokeObjectURL(x.preview);
+                        return { ...x, file, preview: URL.createObjectURL(file) };
+                      }));
+                      e.target.value = "";
+                    }} />
+                  <button type="button" onClick={() => document.getElementById(`new-rera-cert-${r.id}`)?.click()} className="px-5 py-2 bg-white border rounded-md text-black">Upload</button>
+                  {r.preview && <p className="text-sm text-gray-400">{r.file?.name}</p>}
+                  <button type="button" onClick={() => setNewReraCertificates((prev) => { const rem = prev.find((x) => x.id === r.id); if (rem?.preview) URL.revokeObjectURL(rem.preview); return prev.filter((x) => x.id !== r.id); })} className="px-4 py-2 bg-red-500 rounded-md text-white text-sm">Remove</button>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-between items-center mb-4">
+              <label className="block text-sm text-white">RERA scanner images</label>
+              <button type="button" onClick={addNewReraScanner} className="px-5 py-2 bg-white border rounded-md text-black">Add scanner image</button>
+            </div>
+            <div className="space-y-4 mb-6">
+              {reraScannerImages.map((r) => (
+                <div key={r._id} className="border border-gray-700 rounded-xl p-4 bg-gray-800/70 flex flex-wrap gap-4 items-end">
+                  <div className="flex-1 min-w-[140px]">
+                    <label className="block text-sm mb-1 text-white">Title</label>
+                    <input type="text" value={r.title}
+                      onChange={(e) => setReraScannerImages((prev) => prev.map((x) => x._id === r._id ? { ...x, title: e.target.value } : x))}
+                      className="w-full rounded-xl border border-gray-600 bg-gray-900 px-4 py-2 text-white" />
+                  </div>
+                  <img src={asset(r.image)} alt="" className="h-16 w-16 object-cover rounded" />
+                  <button type="button" onClick={() => setReraScannerImages((prev) => prev.filter((x) => x._id !== r._id))} className="px-4 py-2 bg-red-500 rounded-md text-white text-sm">Remove</button>
+                </div>
+              ))}
+              {newReraScannerImages.map((r) => (
+                <div key={r.id} className="border border-gray-700 rounded-xl p-4 bg-gray-800/70 flex flex-wrap gap-4 items-end">
+                  <div className="flex-1 min-w-[140px]">
+                    <label className="block text-sm mb-1 text-white">Title (new)</label>
+                    <input type="text" value={r.title}
+                      onChange={(e) => setNewReraScannerImages((prev) => prev.map((x) => x.id === r.id ? { ...x, title: e.target.value } : x))}
+                      className="w-full rounded-xl border border-gray-600 bg-gray-900 px-4 py-2 text-white" />
+                  </div>
+                  <input type="file" accept="image/*" id={`new-rera-scan-${r.id}`} className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setNewReraScannerImages((prev) => prev.map((x) => {
+                        if (x.id !== r.id) return x;
+                        if (x.preview) URL.revokeObjectURL(x.preview);
+                        return { ...x, image: file, preview: URL.createObjectURL(file) };
+                      }));
+                      e.target.value = "";
+                    }} />
+                  <button type="button" onClick={() => document.getElementById(`new-rera-scan-${r.id}`)?.click()} className="px-5 py-2 bg-white border rounded-md text-black">Upload</button>
+                  {r.preview && <img src={r.preview} alt="" className="h-16 w-16 object-cover rounded" />}
+                  <button type="button" onClick={() => setNewReraScannerImages((prev) => { const rem = prev.find((x) => x.id === r.id); if (rem?.preview) URL.revokeObjectURL(rem.preview); return prev.filter((x) => x.id !== r.id); })} className="px-4 py-2 bg-red-500 rounded-md text-white text-sm">Remove</button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm text-white mb-2">OC certificate</label>
               <input
                 type="file"
                 ref={ocCertInputRef}
@@ -1065,7 +1187,6 @@ const UpdateProject = () => {
                   )}
                 </FilePreviewCard>
               )}
-            </div>
           </div>
 
           <div className="flex flex-col gap-2">
