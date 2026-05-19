@@ -14,6 +14,13 @@ const resetFileInput = (ref) => {
 
 const PROJECT_STATUSES = ["Under Construction", "Ready to Move"];
 
+const PROPERTY_TYPES = [
+  { value: "", label: "— Select property type —" },
+  { value: "Residential", label: "Residential" },
+  { value: "Commercial", label: "Commercial" },
+  { value: "Residential & Commercial", label: "Residential & Commercial (both)" },
+];
+
 const MONTHS = [
   "",
   "January",
@@ -37,6 +44,8 @@ const AddProject = () => {
     name: "",
     builder: "",
     location: "",
+    address: "",
+    propertyType: "",
     status: "Under Construction",
     contactNumber: "",
     latitude: "",
@@ -66,9 +75,9 @@ const AddProject = () => {
   const [bannerImage, setBannerImage] = useState(null);
   const [bannerImagePreview, setBannerImagePreview] = useState(null);
   const bannerImageInputRef = useRef(null);
-  const reraCertInputRef = useRef(null);
   const ocCertInputRef = useRef(null);
-  const [reraCertificate, setReraCertificate] = useState(null);
+  const [reraCertificates, setReraCertificates] = useState([]);
+  const [reraScannerImages, setReraScannerImages] = useState([]);
   const [ocCertificate, setOcCertificate] = useState(null);
 
   const [layouts, setLayouts] = useState([]);
@@ -200,6 +209,14 @@ const AddProject = () => {
     resetFileInput(bannerImageInputRef);
   };
 
+  const handleCoverVideoChange = (e) => {
+    if (coverVideoPreview) URL.revokeObjectURL(coverVideoPreview);
+    const file = e.target.files?.[0];
+    setCoverVideoPreview(file ? URL.createObjectURL(file) : null);
+    setCoverVideo(file || null);
+    e.target.value = null;
+  };
+
   const clearCoverVideo = () => {
     if (coverVideoPreview) URL.revokeObjectURL(coverVideoPreview);
     setCoverVideo(null);
@@ -207,9 +224,66 @@ const AddProject = () => {
     resetFileInput(coverVideoInputRef);
   };
 
-  const clearReraCertificate = () => {
-    setReraCertificate(null);
-    resetFileInput(reraCertInputRef);
+  const addReraCert = () =>
+    setReraCertificates((prev) => [
+      ...prev,
+      { id: Date.now(), title: "", file: null, preview: null },
+    ]);
+  const removeReraCert = (id) =>
+    setReraCertificates((prev) => {
+      const rem = prev.find((r) => r.id === id);
+      if (rem?.preview) URL.revokeObjectURL(rem.preview);
+      return prev.filter((r) => r.id !== id);
+    });
+  const handleReraCertChange = (id, field, value) =>
+    setReraCertificates((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, [field]: value } : r))
+    );
+  const handleReraCertFile = (id, e) => {
+    const file = e.target.files?.[0];
+    setReraCertificates((prev) =>
+      prev.map((r) => {
+        if (r.id !== id) return r;
+        if (r.preview) URL.revokeObjectURL(r.preview);
+        return {
+          ...r,
+          file: file || null,
+          preview: file ? URL.createObjectURL(file) : null,
+        };
+      })
+    );
+    e.target.value = null;
+  };
+
+  const addReraScanner = () =>
+    setReraScannerImages((prev) => [
+      ...prev,
+      { id: Date.now(), title: "", image: null, preview: null },
+    ]);
+  const removeReraScanner = (id) =>
+    setReraScannerImages((prev) => {
+      const rem = prev.find((r) => r.id === id);
+      if (rem?.preview) URL.revokeObjectURL(rem.preview);
+      return prev.filter((r) => r.id !== id);
+    });
+  const handleReraScannerChange = (id, field, value) =>
+    setReraScannerImages((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, [field]: value } : r))
+    );
+  const handleReraScannerFile = (id, e) => {
+    const file = e.target.files?.[0];
+    setReraScannerImages((prev) =>
+      prev.map((r) => {
+        if (r.id !== id) return r;
+        if (r.preview) URL.revokeObjectURL(r.preview);
+        return {
+          ...r,
+          image: file || null,
+          preview: file ? URL.createObjectURL(file) : null,
+        };
+      })
+    );
+    e.target.value = null;
   };
 
   const clearOcCertificate = () => {
@@ -231,6 +305,8 @@ const AddProject = () => {
   useEffect(() => {
     return () => {
       galleryImages.forEach((g) => URL.revokeObjectURL(g.preview));
+      reraCertificates.forEach((r) => r.preview && URL.revokeObjectURL(r.preview));
+      reraScannerImages.forEach((r) => r.preview && URL.revokeObjectURL(r.preview));
       layouts.forEach(
         (l) => l.imagePreview && URL.revokeObjectURL(l.imagePreview)
       );
@@ -260,6 +336,10 @@ const AddProject = () => {
       return;
     }
     const completeLayouts = layouts.filter((l) => l.title && l.imageFile);
+    const completeReraCerts = reraCertificates.filter((r) => r.title?.trim() && r.file);
+    const completeReraScanners = reraScannerImages.filter(
+      (r) => r.title?.trim() && r.image
+    );
 
     setSubmitting(true);
     try {
@@ -269,8 +349,12 @@ const AddProject = () => {
         ...(coverVideo ? [{ field: "coverVideo", file: coverVideo }] : []),
         ...(bannerImage ? [{ field: "bannerImage", file: bannerImage }] : []),
         ...(browcherPdf ? [{ field: "browcherPdf", file: browcherPdf }] : []),
-        ...(reraCertificate ? [{ field: "reraCertificate", file: reraCertificate }] : []),
         ...(ocCertificate ? [{ field: "ocCertificate", file: ocCertificate }] : []),
+        ...completeReraCerts.map((r) => ({ field: "reraCertificate", file: r.file })),
+        ...completeReraScanners.map((r) => ({
+          field: "reraScannerImage",
+          file: r.image,
+        })),
         ...galleryImages.map((g) => ({ field: "galleryImages", file: g.file })),
         ...completeLayouts.map((l) => ({
           field: "layoutImages",
@@ -297,6 +381,8 @@ const AddProject = () => {
           image: u.publicUrl,
         }));
       const layoutImageUrls = urlByField("layoutImages");
+      const reraCertUrls = urlByField("reraCertificate");
+      const reraScannerUrls = urlByField("reraScannerImage");
 
       const layoutsPayload = completeLayouts.map((l, i) => ({
         title: l.title,
@@ -311,6 +397,8 @@ const AddProject = () => {
           name: form.name,
           builder: form.builder,
           location: form.location,
+          address: form.address.trim(),
+          propertyType: form.propertyType,
           status: form.status,
           contactNumber: form.contactNumber.trim(),
           latitude: form.latitude.trim(),
@@ -325,7 +413,14 @@ const AddProject = () => {
           coverVideo: urlByField("coverVideo")[0] || "",
           bannerImage: urlByField("bannerImage")[0] || "",
           browcherPdf: urlByField("browcherPdf")[0] || "",
-          reraCertificate: urlByField("reraCertificate")[0] || "",
+          reraCertificate: completeReraCerts.map((r, i) => ({
+            title: r.title.trim(),
+            file: reraCertUrls[i],
+          })),
+          reraScannerImage: completeReraScanners.map((r, i) => ({
+            title: r.title.trim(),
+            image: reraScannerUrls[i],
+          })),
           ocCertificate: urlByField("ocCertificate")[0] || "",
           galleryImages: galleryUrls,
           layouts: layoutsPayload,
@@ -364,440 +459,218 @@ const AddProject = () => {
           >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {[
-              {
-                label: "Project Name",
-                key: "name",
-                placeholder: "e.g Skyline Estate",
-              },
-              {
-                label: "Builder Name",
-                key: "builder",
-                placeholder: "Builder Name",
-              },
+              { label: "Project Name", key: "name", placeholder: "e.g Skyline Estate", required: true },
+              { label: "Builder Name", key: "builder", placeholder: "Builder Name" },
               { label: "Location", key: "location", placeholder: "Location" },
-            ].map(({ label, key, placeholder }) => (
+            ].map(({ label, key, placeholder, required }) => (
               <div key={key}>
-                <label
-                  htmlFor={key}
-                  className="block text-sm font-semibold mb-2 text-white"
-                >
-                  {label}
-                  {key === "name" ? (
-                    <span className="text-red-400 ml-1">*</span>
-                  ) : null}
+                <label htmlFor={key} className="block text-sm font-semibold mb-2 text-white">
+                  {label}{required ? <span className="text-red-400 ml-1">*</span> : null}
                 </label>
-                <input
-                  id={key}
-                  type="text"
-                  value={form[key]}
-                  required={key === "name"}
-                  placeholder={placeholder}
-                  onChange={(e) =>
-                    setForm((prev) => ({ ...prev, [key]: e.target.value }))
-                  }
-                  className="w-full border border-gray-200 rounded-md bg-gray-800 p-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 transition"
-                />
+                <input id={key} type="text" value={form[key]} required={required} placeholder={placeholder}
+                  onChange={(e) => setForm((prev) => ({ ...prev, [key]: e.target.value }))}
+                  className="w-full border border-gray-200 rounded-md bg-gray-800 p-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500" />
               </div>
             ))}
             <div>
-              <label htmlFor="status" className="block text-sm font-semibold mb-2 text-white">
-                Status
-              </label>
-              <select
-                id="status"
-                value={form.status}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, status: e.target.value }))
-                }
-                className="w-full border border-gray-200 rounded-md bg-gray-800 p-2 text-white focus:ring-2 focus:ring-indigo-500 transition"
-              >
-                {PROJECT_STATUSES.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
+              <label htmlFor="propertyType" className="block text-sm font-semibold mb-2 text-white">Property type</label>
+              <select id="propertyType" value={form.propertyType} onChange={(e) => setForm((prev) => ({ ...prev, propertyType: e.target.value }))}
+                className="w-full border border-gray-200 rounded-md bg-gray-800 p-2 text-white focus:ring-2 focus:ring-indigo-500">
+                {PROPERTY_TYPES.map(({ value, label }) => <option key={value || "none"} value={value}>{label}</option>)}
               </select>
             </div>
             <div>
-              <label htmlFor="contactNumber" className="block text-sm font-semibold mb-2 text-white">
-                Contact number
-              </label>
-              <input
-                id="contactNumber"
-                type="tel"
-                value={form.contactNumber}
-                placeholder="e.g. +91 98765 43210"
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, contactNumber: e.target.value }))
-                }
-                className="w-full border border-gray-200 rounded-md bg-gray-800 p-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 transition"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="latitude" className="block text-sm font-semibold mb-2 text-white">
-                Map latitude <span className="text-gray-400 font-normal">(optional, WGS84)</span>
-              </label>
-              <input
-                id="latitude"
-                type="text"
-                inputMode="decimal"
-                placeholder="e.g. 19.2812"
-                value={form.latitude}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, latitude: e.target.value }))
-                }
-                className="w-full border border-gray-200 rounded-md bg-gray-800 p-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 transition"
-              />
-            </div>
-            <div>
-              <label htmlFor="longitude" className="block text-sm font-semibold mb-2 text-white">
-                Map longitude <span className="text-gray-400 font-normal">(optional)</span>
-              </label>
-              <input
-                id="longitude"
-                type="text"
-                inputMode="decimal"
-                placeholder="e.g. 72.8574"
-                value={form.longitude}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, longitude: e.target.value }))
-                }
-                className="w-full border border-gray-200 rounded-md bg-gray-800 p-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 transition"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="reraNo" className="block text-sm font-semibold mb-2 text-white">
-                RERA number
-              </label>
-              <input
-                id="reraNo"
-                type="text"
-                value={form.reraNo}
-                placeholder="e.g. P51800012345"
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, reraNo: e.target.value }))
-                }
-                className="w-full p-2 border border-gray-200 rounded-md bg-gray-800 text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-semibold mb-2 text-white">
-                RERA possession (month)
-              </label>
-              <select
-                value={form.reraMonth}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, reraMonth: e.target.value }))
-                }
-                className="w-full p-2 border border-gray-200 rounded-md bg-gray-800 text-white focus:ring-2 focus:ring-indigo-500"
-              >
-                {MONTHS.map((m) => (
-                  <option key={m || "none"} value={m}>
-                    {m || "—"}
-                  </option>
-                ))}
+              <label htmlFor="status" className="block text-sm font-semibold mb-2 text-white">Status</label>
+              <select id="status" value={form.status} onChange={(e) => setForm((prev) => ({ ...prev, status: e.target.value }))}
+                className="w-full border border-gray-200 rounded-md bg-gray-800 p-2 text-white focus:ring-2 focus:ring-indigo-500">
+                {PROJECT_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-semibold mb-2 text-white">
-                RERA possession (year)
-              </label>
-              <input
-                type="number"
-                placeholder="2026"
-                value={form.reraYear}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, reraYear: e.target.value }))
-                }
-                className="w-full p-2 border border-gray-200 rounded-md bg-gray-800 text-white focus:ring-2 focus:ring-indigo-500"
-              />
+              <label htmlFor="contactNumber" className="block text-sm font-semibold mb-2 text-white">Contact number</label>
+              <input id="contactNumber" type="tel" value={form.contactNumber} placeholder="e.g. +91 98765 43210"
+                onChange={(e) => setForm((prev) => ({ ...prev, contactNumber: e.target.value }))}
+                className="w-full border border-gray-200 rounded-md bg-gray-800 p-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500" />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm text-white mb-2">
-              Logo image <span className="text-red-400">*</span>
+            <label htmlFor="address" className="block text-sm font-semibold mb-2 text-white">
+              Full address <span className="text-gray-400 font-normal">(optional)</span>
             </label>
-            <div className="flex items-center gap-4 flex-wrap">
-              <input
-                type="file"
-                ref={logoInputRef}
-                accept="image/*"
-                className="hidden"
-                onChange={handleLogoChange}
-              />
-              <button
-                type="button"
-                onClick={onLogoButtonClick}
-                className="px-5 py-2 bg-white border rounded-md text-black shadow-md hover:bg-black hover:text-white hover:border-white transition"
-              >
-                Upload Logo
-              </button>
-              {logo && logoPreview && (
-                <FilePreviewCard onRemove={clearLogo} ariaLabel="Remove logo">
-                  <img
-                    src={logoPreview}
-                    className="h-24 w-32 object-cover"
-                    alt=""
-                  />
-                </FilePreviewCard>
-              )}
+            <textarea id="address" rows={2} value={form.address}
+              placeholder="Dronagiri, Plot No. 84, Kaamtha Rd, Nr, Vimla Talao, New, Uran, Mumbai"
+              onChange={(e) => setForm((prev) => ({ ...prev, address: e.target.value }))}
+              className="w-full border border-gray-200 rounded-md bg-gray-800 p-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 min-h-[72px]" />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="latitude" className="block text-sm font-semibold mb-2 text-white">Map latitude <span className="text-gray-400 font-normal">(optional)</span></label>
+              <input id="latitude" type="text" inputMode="decimal" placeholder="e.g. 19.2812" value={form.latitude}
+                onChange={(e) => setForm((prev) => ({ ...prev, latitude: e.target.value }))}
+                className="w-full border border-gray-200 rounded-md bg-gray-800 p-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500" />
+            </div>
+            <div>
+              <label htmlFor="longitude" className="block text-sm font-semibold mb-2 text-white">Map longitude <span className="text-gray-400 font-normal">(optional)</span></label>
+              <input id="longitude" type="text" inputMode="decimal" placeholder="e.g. 72.8574" value={form.longitude}
+                onChange={(e) => setForm((prev) => ({ ...prev, longitude: e.target.value }))}
+                className="w-full border border-gray-200 rounded-md bg-gray-800 p-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="reraNo" className="block text-sm font-semibold mb-2 text-white">RERA number</label>
+              <input id="reraNo" type="text" value={form.reraNo} placeholder="RERA registration no."
+                onChange={(e) => setForm((prev) => ({ ...prev, reraNo: e.target.value }))}
+                className="w-full border border-gray-200 rounded-md bg-gray-800 p-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold mb-2 text-white">RERA possession (month)</label>
+              <select value={form.reraMonth} onChange={(e) => setForm((prev) => ({ ...prev, reraMonth: e.target.value }))}
+                className="w-full p-2 border border-gray-200 rounded-md bg-gray-800 text-white focus:ring-2 focus:ring-indigo-500">
+                {MONTHS.map((m) => <option key={m || "none"} value={m}>{m || "—"}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold mb-2 text-white">RERA possession (year)</label>
+              <input type="number" placeholder="2026" value={form.reraYear}
+                onChange={(e) => setForm((prev) => ({ ...prev, reraYear: e.target.value }))}
+                className="w-full p-2 border border-gray-200 rounded-md bg-gray-800 text-white focus:ring-2 focus:ring-indigo-500" />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm text-white mb-2">Cover Image</label>
-            <div className="flex items-center gap-4 flex-wrap">
-              <input
-                type="file"
-                ref={coverImageInputRef}
-                accept="image/*"
-                className="hidden"
-                onChange={handleCoverImageChange}
-              />
-              <button
-                type="button"
-                onClick={onCoverImageButtonClick}
-                className="px-5 py-2 bg-white border rounded-md text-black shadow-md hover:bg-black hover:text-white hover:border-white transition"
-              >
-                Upload Cover Image
-              </button>
-              {coverImage && coverImagePreview && (
-                <FilePreviewCard
-                  onRemove={clearCoverImage}
-                  ariaLabel="Remove cover image"
-                >
-                  <img
-                    src={coverImagePreview}
-                    className="h-24 w-32 object-cover"
-                    alt=""
-                  />
-                </FilePreviewCard>
-              )}
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm text-white mb-2">
-              Banner image <span className="text-gray-400">(optional)</span>
-            </label>
-            <div className="flex items-center gap-4 flex-wrap">
-              <input
-                type="file"
-                ref={bannerImageInputRef}
-                accept="image/*"
-                className="hidden"
-                onChange={handleBannerImageChange}
-              />
-              <button
-                type="button"
-                onClick={onBannerImageButtonClick}
-                className="px-5 py-2 bg-white border rounded-md text-black shadow-md hover:bg-black hover:text-white hover:border-white transition"
-              >
-                Upload banner image
-              </button>
-              {bannerImage && bannerImagePreview && (
-                <FilePreviewCard
-                  onRemove={clearBannerImage}
-                  ariaLabel="Remove banner image"
-                >
-                  <img
-                    src={bannerImagePreview}
-                    className="h-24 w-32 object-cover"
-                    alt=""
-                  />
-                </FilePreviewCard>
-              )}
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm text-white mb-2">Cover Video</label>
-            <input
-              type="file"
-              ref={coverVideoInputRef}
-              accept="video/*"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (coverVideoPreview) URL.revokeObjectURL(coverVideoPreview);
-                setCoverVideo(file || null);
-                setCoverVideoPreview(
-                  file ? URL.createObjectURL(file) : null
-                );
-                e.target.value = null;
-              }}
-            />
-            <button
-              type="button"
-              onClick={() => coverVideoInputRef.current?.click()}
-              className="px-5 py-2 bg-white border rounded-md text-black shadow-md hover:bg-black hover:text-white transition"
-            >
-              Upload cover video
-            </button>
-            {coverVideo && coverVideoPreview && (
-              <FilePreviewCard
-                onRemove={clearCoverVideo}
-                ariaLabel="Remove cover video"
-                className="mt-2 block max-w-xs"
-              >
-                <video
-                  src={coverVideoPreview}
-                  className="h-32 w-full object-cover"
-                  controls
-                />
+            <label className="block text-sm text-white mb-2">Logo image <span className="text-red-400">*</span></label>
+            <input type="file" ref={logoInputRef} accept="image/*" className="hidden" onChange={handleLogoChange} />
+            <button type="button" onClick={onLogoButtonClick} className="px-5 py-2 bg-white border rounded-md text-black shadow-md hover:bg-black hover:text-white transition">Upload Logo</button>
+            {logoPreview && (
+              <FilePreviewCard onRemove={clearLogo} ariaLabel="Remove logo" className="mt-2 inline-block">
+                <img src={logoPreview} alt="" className="h-24 w-24 object-cover" />
               </FilePreviewCard>
             )}
           </div>
 
+          <div>
+            <label className="block text-sm text-white mb-2">Cover Image</label>
+            <input type="file" ref={coverImageInputRef} accept="image/*" className="hidden" onChange={handleCoverImageChange} />
+            <button type="button" onClick={onCoverImageButtonClick} className="px-5 py-2 bg-white border rounded-md text-black shadow-md hover:bg-black hover:text-white transition">Upload Cover Image</button>
+            {coverImagePreview && (
+              <FilePreviewCard onRemove={clearCoverImage} ariaLabel="Remove cover image" className="mt-2 inline-block">
+                <img src={coverImagePreview} alt="" className="h-24 w-24 object-cover" />
+              </FilePreviewCard>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm text-white mb-2">Banner image <span className="text-gray-400">(optional)</span></label>
+            <input type="file" ref={bannerImageInputRef} accept="image/*" className="hidden" onChange={handleBannerImageChange} />
+            <button type="button" onClick={onBannerImageButtonClick} className="px-5 py-2 bg-white border rounded-md text-black shadow-md hover:bg-black hover:text-white transition">Upload banner</button>
+            {bannerImagePreview && (
+              <FilePreviewCard onRemove={clearBannerImage} ariaLabel="Remove banner" className="mt-2 inline-block">
+                <img src={bannerImagePreview} alt="" className="h-24 w-24 object-cover" />
+              </FilePreviewCard>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm text-white mb-2">Cover video</label>
+            <input type="file" ref={coverVideoInputRef} accept="video/*" className="hidden" onChange={handleCoverVideoChange} />
+            <button type="button" onClick={() => coverVideoInputRef.current?.click()} className="px-5 py-2 bg-white border rounded-md text-black shadow-md hover:bg-black hover:text-white transition">Upload cover video</button>
+            {coverVideo && coverVideoPreview && (
+              <FilePreviewCard onRemove={clearCoverVideo} ariaLabel="Remove cover video" className="mt-2 block max-w-xs">
+                <video src={coverVideoPreview} className="h-32 w-full object-cover" controls />
+              </FilePreviewCard>
+            )}
+          </div>
 
           <div>
             <div className="flex justify-between items-center mb-2">
               <label className="block text-sm text-white">Gallery Images</label>
-              <button
-                type="button"
-                onClick={onGalleryButtonClick}
-                className="px-5 py-2 bg-white border rounded-md text-black shadow-md hover:bg-black hover:text-white transition"
-              >
-                Add Images
-              </button>
+              <button type="button" onClick={onGalleryButtonClick} className="px-5 py-2 bg-white border rounded-md text-black shadow-md hover:bg-black hover:text-white transition">Add Images</button>
             </div>
-            <input
-              type="file"
-              ref={galleryInputRef}
-              accept="image/*"
-              multiple
-              className="hidden"
-              onChange={handleGalleryChange}
-            />
+            <input type="file" ref={galleryInputRef} accept="image/*" multiple className="hidden" onChange={handleGalleryChange} />
             <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
               {galleryImages.map((g) => (
-                <div
-                  key={g.id}
-                  className="relative border border-gray-700 rounded-xl overflow-hidden bg-gray-800/70"
-                >
-                  <img
-                    src={g.preview}
-                    alt={g.file.name}
-                    className="w-full h-24 object-cover"
-                  />
-                  <button
-                    type="button"
-                    className="absolute top-1 right-1 bg-black/70 rounded-full p-1 text-red-400"
-                    onClick={() => removeGalleryImage(g.id)}
-                  >
-                    ✕
-                  </button>
+                <div key={g.id} className="relative border border-gray-700 rounded-xl overflow-hidden bg-gray-800/70">
+                  <img src={g.preview} alt={g.file.name} className="w-full h-24 object-cover" />
+                  <button type="button" className="absolute top-1 right-1 bg-black/70 rounded-full p-1 text-red-400" onClick={() => removeGalleryImage(g.id)}>✕</button>
                 </div>
               ))}
             </div>
           </div>
 
           <div>
-            <label
-              htmlFor="description"
-              className="block text-sm mb-2 text-white"
-            >
-              Description <span className="text-red-400">*</span>
-            </label>
-            <textarea
-              id="description"
-              value={form.description}
-              required
-              onChange={(e) =>
-                setForm((prev) => ({ ...prev, description: e.target.value }))
-              }
-              placeholder="Brief description"
-              className="w-full rounded-md border border-gray-200 bg-gray-800 p-2 text-white focus:ring-2 focus:ring-indigo-500 min-h-[80px]"
-              rows={4}
-            />
+            <label htmlFor="description" className="block text-sm mb-2 text-white">Description <span className="text-red-400">*</span></label>
+            <textarea id="description" value={form.description} required rows={4} placeholder="Brief description"
+              onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
+              className="w-full rounded-md border border-gray-200 bg-gray-800 p-2 text-white focus:ring-2 focus:ring-indigo-500 min-h-[80px]" />
           </div>
 
           <div>
             <label className="block text-sm mb-2 text-white">Features</label>
             <div className="flex gap-3">
-              <input
-                value={featureInput}
-                onChange={(e) => setFeatureInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === ",") {
-                    e.preventDefault();
-                    addFeature();
-                  }
-                }}
+              <input value={featureInput} onChange={(e) => setFeatureInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addFeature(); } }}
                 placeholder="Type a feature and press Enter"
-                className="flex-grow p-2 rounded-xl bg-gray-800 border border-black-200 text-white focus:ring-2 focus:ring-indigo-500"
-              />
-              <button
-                type="button"
-                onClick={addFeature}
-                className="px-5 py-2 bg-white border rounded-md text-black shadow-md hover:bg-black hover:text-white transition"
-              >
-                Add
-              </button>
+                className="flex-grow p-2 rounded-xl bg-gray-800 border border-black-200 text-white focus:ring-2 focus:ring-indigo-500" />
+              <button type="button" onClick={addFeature} className="px-5 py-2 bg-white border rounded-md text-black shadow-md hover:bg-black hover:text-white transition">Add</button>
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
               {features.map((f) => (
-                <div
-                  key={f}
-                  className="bg-white text-black px-2 py-1 rounded-md flex items-center gap-2 text-sm"
-                >
+                <div key={f} className="bg-white text-black px-2 py-1 rounded-md flex items-center gap-2 text-sm">
                   <span>{f}</span>
-                  <button
-                    type="button"
-                    onClick={() => removeFeature(f)}
-                    className="text-red-400 hover:text-red-600"
-                  >
-                    ✕
-                  </button>
+                  <button type="button" onClick={() => removeFeature(f)} className="text-red-400 hover:text-red-600">✕</button>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div>
+            <div className="flex justify-between items-center mb-4">
+              <label className="block text-sm text-white">RERA certificates</label>
+              <button type="button" onClick={addReraCert} className="px-5 py-2 bg-white border rounded-md text-black shadow-md hover:bg-black hover:text-white transition">
+                Add certificate
+              </button>
+            </div>
+            <div className="space-y-4 mb-6">
+              {reraCertificates.map((r) => (
+                <div key={r.id} className="border border-gray-700 rounded-xl p-4 bg-gray-800/70 flex flex-wrap gap-4 items-end">
+                  <div className="flex-1 min-w-[140px]">
+                    <label className="block text-sm mb-1 text-white">Title</label>
+                    <input type="text" value={r.title} placeholder="Project, Tower A…" onChange={(e) => handleReraCertChange(r.id, "title", e.target.value)} className="w-full rounded-xl border border-gray-600 bg-gray-900 px-4 py-2 text-white" />
+                  </div>
+                  <input type="file" accept=".pdf,application/pdf,image/*" id={`rera-cert-${r.id}`} className="hidden" onChange={(e) => handleReraCertFile(r.id, e)} />
+                  <button type="button" onClick={() => document.getElementById(`rera-cert-${r.id}`)?.click()} className="px-5 py-2 bg-white border rounded-md text-black">Upload</button>
+                  {r.preview && <p className="text-sm text-gray-400 truncate max-w-[160px]">{r.file?.name}</p>}
+                  <button type="button" onClick={() => removeReraCert(r.id)} className="px-4 py-2 bg-red-500 rounded-md text-white text-sm">Remove</button>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-between items-center mb-4">
+              <label className="block text-sm text-white">RERA scanner images</label>
+              <button type="button" onClick={addReraScanner} className="px-5 py-2 bg-white border rounded-md text-black shadow-md hover:bg-black hover:text-white transition">
+                Add scanner image
+              </button>
+            </div>
+            <div className="space-y-4 mb-6">
+              {reraScannerImages.map((r) => (
+                <div key={r.id} className="border border-gray-700 rounded-xl p-4 bg-gray-800/70 flex flex-wrap gap-4 items-end">
+                  <div className="flex-1 min-w-[140px]">
+                    <label className="block text-sm mb-1 text-white">Title</label>
+                    <input type="text" value={r.title} placeholder="Project, Tower A…" onChange={(e) => handleReraScannerChange(r.id, "title", e.target.value)} className="w-full rounded-xl border border-gray-600 bg-gray-900 px-4 py-2 text-white" />
+                  </div>
+                  <input type="file" accept="image/*" id={`rera-scan-${r.id}`} className="hidden" onChange={(e) => handleReraScannerFile(r.id, e)} />
+                  <button type="button" onClick={() => document.getElementById(`rera-scan-${r.id}`)?.click()} className="px-5 py-2 bg-white border rounded-md text-black">Upload</button>
+                  {r.preview && <img src={r.preview} alt="" className="h-16 w-16 object-cover rounded" />}
+                  <button type="button" onClick={() => removeReraScanner(r.id)} className="px-4 py-2 bg-red-500 rounded-md text-white text-sm">Remove</button>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm text-white mb-2">RERA certificate</label>
-              <input
-                type="file"
-                ref={reraCertInputRef}
-                accept=".pdf,application/pdf,image/*"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) setReraCertificate(file);
-                }}
-              />
-              <button
-                type="button"
-                onClick={() => reraCertInputRef.current?.click()}
-                className="px-5 py-2 bg-white border rounded-md text-black shadow-md hover:bg-black hover:text-white transition"
-              >
-                Upload
-              </button>
-              {reraCertificate && (
-                <FilePreviewCard
-                  onRemove={clearReraCertificate}
-                  ariaLabel="Remove RERA certificate"
-                  className="ml-2 inline-block max-w-[220px]"
-                >
-                  <p className="truncate px-3 py-2 text-sm text-gray-200">
-                    {reraCertificate.name}
-                  </p>
-                </FilePreviewCard>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm text-white mb-2">OC certificate</label>
+          <div>
+            <label className="block text-sm text-white mb-2">OC certificate</label>
               <input
                 type="file"
                 ref={ocCertInputRef}
@@ -826,7 +699,6 @@ const AddProject = () => {
                   </p>
                 </FilePreviewCard>
               )}
-            </div>
           </div>
 
           <div>
