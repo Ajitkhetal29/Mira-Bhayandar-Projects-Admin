@@ -70,6 +70,7 @@ const UpdateProject = () => {
     reraNo: "",
     reraMonth: "",
     reraYear: "",
+    active: true,
   });
 
   const [features, setFeatures] = useState([]);
@@ -138,6 +139,7 @@ const UpdateProject = () => {
           found.reraPossession?.year != null
             ? String(found.reraPossession.year)
             : "",
+        active: found.active !== false,
       });
       setFeatures(found.features || []);
       setGalleryImages(found.galleryImages || []);
@@ -192,8 +194,11 @@ const UpdateProject = () => {
   ]);
 
   const handleFormChange = (e) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    setForm((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
   };
 
   const handleAddFeature = () => {
@@ -639,6 +644,7 @@ const UpdateProject = () => {
         galleryNewImages: newGalleryPaths,
         layouts: layouts || [],
         newLayouts: newLayoutsPayload,
+        active: form.active,
       };
 
       if (pdfChanged) payload.browcherPdf = firstUrl("browcherPdf") || browcherPdf;
@@ -770,6 +776,23 @@ const UpdateProject = () => {
                 onChange={handleFormChange}
                 className="p-2 rounded-lg bg-gray-800 border border-gray-600 text-white placeholder-gray-500 focus:ring-2 focus:ring-indigo-500"
               />
+            </div>
+            <div className="flex flex-col md:col-span-2">
+              <label className="mb-2 flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  name="active"
+                  checked={form.active}
+                  onChange={handleFormChange}
+                  className="mt-1 h-4 w-4 rounded border-gray-500 text-indigo-500 focus:ring-indigo-500"
+                />
+                <span>
+                  <span className="block text-gray-200 font-medium">Show on website</span>
+                  <span className="block text-xs text-gray-500 mt-0.5">
+                    Uncheck to hide from public listings and project pages.
+                  </span>
+                </span>
+              </label>
             </div>
             <div className="flex flex-col">
               <label className="mb-1 text-gray-200">

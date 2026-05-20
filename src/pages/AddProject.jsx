@@ -54,6 +54,7 @@ const AddProject = () => {
     reraNo: "",
     reraMonth: "",
     reraYear: "",
+    active: true,
   });
 
   const [featureInput, setFeatureInput] = useState("");
@@ -424,6 +425,7 @@ const AddProject = () => {
           ocCertificate: urlByField("ocCertificate")[0] || "",
           galleryImages: galleryUrls,
           layouts: layoutsPayload,
+          active: form.active,
         },
         { timeout: 60_000 }
       );
@@ -491,6 +493,23 @@ const AddProject = () => {
               <input id="contactNumber" type="tel" value={form.contactNumber} placeholder="e.g. +91 98765 43210"
                 onChange={(e) => setForm((prev) => ({ ...prev, contactNumber: e.target.value }))}
                 className="w-full border border-gray-200 rounded-md bg-gray-800 p-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500" />
+            </div>
+            <div className="md:col-span-2 flex items-start gap-3 rounded-md border border-gray-600 bg-gray-800/60 p-4">
+              <input
+                id="active"
+                type="checkbox"
+                checked={form.active}
+                onChange={(e) => setForm((prev) => ({ ...prev, active: e.target.checked }))}
+                className="mt-1 h-4 w-4 rounded border-gray-500 text-indigo-500 focus:ring-indigo-500"
+              />
+              <div>
+                <label htmlFor="active" className="block text-sm font-semibold text-white cursor-pointer">
+                  Show on website
+                </label>
+                <p className="text-xs text-gray-400 mt-1">
+                  Uncheck to hide this project from listings and detail pages on the public site.
+                </p>
+              </div>
             </div>
           </div>
 

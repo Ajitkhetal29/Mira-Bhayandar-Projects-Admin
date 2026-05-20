@@ -21,7 +21,9 @@ const AppConetxtProvider = (props) => {
     console.log("getAllProjects  called");
 
     try {
-      const response = await axios.get(`${backendUrl}/api/project/allProjects`);
+      const response = await axios.get(
+        `${backendUrl}/api/project/allProjects?includeInactive=true`
+      );
       if (response.data.success) {
         setAllProjects(response.data.allProjects);
         console.log("getAllProjects  success");

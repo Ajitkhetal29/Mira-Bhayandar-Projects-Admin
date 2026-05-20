@@ -44,6 +44,7 @@ const AllProjects = () => {
                 <th>Project Name</th>
                 <th>Location</th>
                 <th>Status</th>
+                <th>On website</th>
                 <th>Contact</th>
                 <th>RERA no.</th>
                 <th>RERA possession</th>
@@ -57,6 +58,17 @@ const AllProjects = () => {
                   <td className="cell-strong whitespace-nowrap">{project.name}</td>
                   <td>{project.location}</td>
                   <td>{project.status || "Under Construction"}</td>
+                  <td>
+                    <span
+                      className={
+                        project.active !== false
+                          ? "inline-flex rounded-full bg-emerald-900/40 px-2 py-0.5 text-xs text-emerald-300"
+                          : "inline-flex rounded-full bg-gray-700 px-2 py-0.5 text-xs text-gray-400"
+                      }
+                    >
+                      {project.active !== false ? "Visible" : "Hidden"}
+                    </span>
+                  </td>
                   <td className="whitespace-nowrap">
                     {project.contactNumber ? (
                       <a
