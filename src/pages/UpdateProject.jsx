@@ -1270,7 +1270,12 @@ const UpdateProject = () => {
 
           <div className="flex flex-col gap-4">
             <div className="flex justify-between items-center">
-              <label className="block text-sm text-white">Layouts</label>
+              <label className="block text-sm text-white">
+                Layouts{" "}
+                <span className="text-gray-400 font-normal">
+                  (title required; area, price & image optional)
+                </span>
+              </label>
               <button
                 type="button"
                 onClick={handleAddLayout}
@@ -1351,7 +1356,8 @@ const UpdateProject = () => {
                     }
                     className="px-5 py-2 bg-white border rounded-md text-black mb-2"
                   >
-                    {isNew ? "Change image" : "Change image"}
+                    {isNew ? "Add image" : "Change image"}{" "}
+                    <span className="text-gray-500 font-normal">(optional)</span>
                   </button>
                   {(l.imagePreview || (l.image && l.image !== "")) && (
                     <FilePreviewCard

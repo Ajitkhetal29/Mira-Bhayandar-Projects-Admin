@@ -336,7 +336,7 @@ const AddProject = () => {
       toast.error("Logo is required");
       return;
     }
-    const completeLayouts = layouts.filter((l) => l.title && l.imageFile);
+    const completeLayouts = layouts.filter((l) => l.title?.trim());
     const completeReraCerts = reraCertificates.filter((r) => r.title?.trim() && r.file);
     const completeReraScanners = reraScannerImages.filter(
       (r) => r.title?.trim() && r.image
@@ -357,10 +357,12 @@ const AddProject = () => {
           file: r.image,
         })),
         ...galleryImages.map((g) => ({ field: "galleryImages", file: g.file })),
-        ...completeLayouts.map((l) => ({
-          field: "layoutImages",
-          file: l.imageFile,
-        })),
+        ...completeLayouts
+          .filter((l) => l.imageFile)
+          .map((l) => ({
+            field: "layoutImages",
+            file: l.imageFile,
+          })),
       ];
 
       const uploaded = await uploadProjectFilesToS3(
@@ -385,11 +387,12 @@ const AddProject = () => {
       const reraCertUrls = urlByField("reraCertificate");
       const reraScannerUrls = urlByField("reraScannerImage");
 
-      const layoutsPayload = completeLayouts.map((l, i) => ({
-        title: l.title,
+      let layoutImgIdx = 0;
+      const layoutsPayload = completeLayouts.map((l) => ({
+        title: l.title.trim(),
         area: l.area,
         price: l.price,
-        image: layoutImageUrls[i],
+        image: l.imageFile ? layoutImageUrls[layoutImgIdx++] || "" : "",
       }));
 
       const response = await axios.post(
@@ -756,7 +759,12 @@ const AddProject = () => {
 
           <div>
             <div className="flex justify-between items-center mb-4">
-              <label className="block text-sm text-white">Layouts</label>
+              <label className="block text-sm text-white">
+                Layouts{" "}
+                <span className="text-gray-400 font-normal">
+                  (title required; area, price & image optional)
+                </span>
+              </label>
               <button
                 type="button"
                 onClick={addLayout}
@@ -822,7 +830,8 @@ const AddProject = () => {
                       }
                       className="px-5 py-2 bg-white border rounded-md text-black shadow-md hover:bg-black hover:text-white transition"
                     >
-                      Add Image
+                      Add Image{" "}
+                      <span className="text-gray-500 font-normal">(optional)</span>
                     </button>
                   </div>
                   {l.imagePreview && (
