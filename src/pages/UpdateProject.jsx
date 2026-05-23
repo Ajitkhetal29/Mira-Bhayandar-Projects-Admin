@@ -23,6 +23,14 @@ const PROPERTY_TYPES = [
   { value: "Residential & Commercial", label: "Residential & Commercial (both)" },
 ];
 
+function layoutImagesFromRow(l) {
+  if (Array.isArray(l?.images) && l.images.length) {
+    return l.images.map((u) => String(u || "").trim()).filter(Boolean);
+  }
+  const single = String(l?.image || "").trim();
+  return single ? [single] : [];
+}
+
 const MONTHS = [
   "",
   "January",
@@ -143,7 +151,14 @@ const UpdateProject = () => {
       });
       setFeatures(found.features || []);
       setGalleryImages(found.galleryImages || []);
-      setLayouts(found.layouts || []);
+      setLayouts(
+        (found.layouts || []).map((l) => ({
+          ...l,
+          area: l.area != null && l.area !== "" ? String(l.area) : "",
+          images: layoutImagesFromRow(l),
+          pendingFiles: [],
+        }))
+      );
       setNewGalleryImages([]);
       setNewLayouts([]);
       setBrowcherPdf(found.browcherPdf || null);
@@ -174,8 +189,15 @@ const UpdateProject = () => {
       newGalleryImages.forEach((g) => URL.revokeObjectURL(g.preview));
       newReraCertificates.forEach((r) => r.preview && URL.revokeObjectURL(r.preview));
       newReraScannerImages.forEach((r) => r.preview && URL.revokeObjectURL(r.preview));
-      newLayouts.forEach(
-        (l) => l.imagePreview && URL.revokeObjectURL(l.imagePreview)
+      newLayouts.forEach((l) =>
+        (l.pendingFiles || []).forEach(
+          (p) => p.preview && URL.revokeObjectURL(p.preview)
+        )
+      );
+      layouts.forEach((l) =>
+        (l.pendingFiles || []).forEach(
+          (p) => p.preview && URL.revokeObjectURL(p.preview)
+        )
       );
       if (logoPreview) URL.revokeObjectURL(logoPreview);
       if (coverImagePreview) URL.revokeObjectURL(coverImagePreview);
@@ -363,23 +385,38 @@ const UpdateProject = () => {
     resetFileInput(ocCertInputRef);
   };
 
-  const clearLayoutImage = (row, isNew) => {
-    const inputId = `layoutInput-${isNew ? row.id : row._id}`;
+  const removeLayoutStoredImage = (row, isNew, url) => {
     if (isNew) {
       setNewLayouts((prev) =>
-        prev.map((l) => {
-          if (l.id !== row.id) return l;
-          if (l.imagePreview) URL.revokeObjectURL(l.imagePreview);
-          return { ...l, image: null, imagePreview: null };
-        })
+        prev.map((l) =>
+          l.id === row.id
+            ? { ...l, images: (l.images || []).filter((u) => u !== url) }
+            : l
+        )
       );
     } else {
       setLayouts((prev) =>
-        prev.map((l) => (l._id === row._id ? { ...l, image: "" } : l))
+        prev.map((l) =>
+          l._id === row._id
+            ? { ...l, images: (l.images || []).filter((u) => u !== url) }
+            : l
+        )
       );
     }
-    const input = document.getElementById(inputId);
-    if (input) input.value = "";
+  };
+
+  const removeLayoutPendingImage = (row, isNew, imageId) => {
+    const patch = (l) => {
+      if ((isNew ? l.id : l._id) !== (isNew ? row.id : row._id)) return l;
+      const rem = (l.pendingFiles || []).find((p) => p.id === imageId);
+      if (rem?.preview) URL.revokeObjectURL(rem.preview);
+      return {
+        ...l,
+        pendingFiles: (l.pendingFiles || []).filter((p) => p.id !== imageId),
+      };
+    };
+    if (isNew) setNewLayouts((prev) => prev.map(patch));
+    else setLayouts((prev) => prev.map(patch));
   };
 
   const coverImageDisplaySrc = () => {
@@ -450,17 +487,24 @@ const UpdateProject = () => {
         title: "",
         area: "",
         price: "",
-        image: null,
-        imagePreview: null,
+        images: [],
+        pendingFiles: [],
       },
     ]);
   };
 
-  const removeLayout = (lid) =>
+  const removeLayout = (lid) => {
+    const rem = layouts.find((l) => l._id === lid);
+    (rem?.pendingFiles || []).forEach(
+      (p) => p.preview && URL.revokeObjectURL(p.preview)
+    );
     setLayouts((prev) => prev.filter((l) => l._id !== lid));
+  };
   const removeNewLayout = (lid) => {
     const rem = newLayouts.find((l) => l.id === lid);
-    if (rem?.imagePreview) URL.revokeObjectURL(rem.imagePreview);
+    (rem?.pendingFiles || []).forEach(
+      (p) => p.preview && URL.revokeObjectURL(p.preview)
+    );
     setNewLayouts((prev) => prev.filter((l) => l.id !== lid));
   };
 
@@ -477,38 +521,21 @@ const UpdateProject = () => {
     );
   };
 
-  const handleLayoutImageChange = (lid, e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const removedLayout = layouts.find((l) => l._id === lid);
-    if (!removedLayout) return;
-    const { _id: _removedId, ...layoutRest } = removedLayout;
-    setLayouts((prev) => prev.filter((l) => l._id !== lid));
-    setNewLayouts((prev) => [
-      ...prev,
-      {
-        ...layoutRest,
-        id: Date.now(),
-        image: file,
-        imagePreview: URL.createObjectURL(file),
-      },
-    ]);
-  };
-
-  const handleNewLayoutImageChange = (lid, e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setNewLayouts((prev) =>
-      prev.map((l) => {
-        if (l.id !== lid) return l;
-        if (l.imagePreview) URL.revokeObjectURL(l.imagePreview);
-        return {
-          ...l,
-          image: file,
-          imagePreview: URL.createObjectURL(file),
-        };
-      })
-    );
+  const handleLayoutImagesAdd = (rowKey, isNew, e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    const added = files.map((file, idx) => ({
+      id: Date.now() + idx,
+      file,
+      preview: URL.createObjectURL(file),
+    }));
+    const patch = (l) => {
+      const key = isNew ? l.id : l._id;
+      if (key !== rowKey) return l;
+      return { ...l, pendingFiles: [...(l.pendingFiles || []), ...added] };
+    };
+    if (isNew) setNewLayouts((prev) => prev.map(patch));
+    else setLayouts((prev) => prev.map(patch));
     e.target.value = null;
   };
 
@@ -552,9 +579,10 @@ const UpdateProject = () => {
       newGalleryImages.forEach((img) =>
         uploadEntries.push({ field: "galleryNewImages", file: img.file })
       );
-      newLayouts.forEach((l) => {
-        if (l.image instanceof File)
-          uploadEntries.push({ field: "newlayoutImages", file: l.image });
+      [...layouts, ...newLayouts].forEach((l) => {
+        (l.pendingFiles || []).forEach((p) => {
+          uploadEntries.push({ field: "newlayoutImages", file: p.file });
+        });
       });
 
       const uploaded =
@@ -590,15 +618,21 @@ const UpdateProject = () => {
         .map((u) => u.publicUrl);
 
       let newLayoutUrlIdx = 0;
-      const newLayoutsPayload = (newLayouts || []).map((l) => {
-        const row = { title: l.title, area: l.area, price: l.price, image: "" };
-        if (l.image instanceof File) {
-          row.image = newLayoutImageUrls[newLayoutUrlIdx++] || "";
-        } else if (typeof l.image === "string") {
-          row.image = l.image;
-        }
-        return row;
-      });
+      const mapLayoutRow = (l) => {
+        const uploaded = (l.pendingFiles || []).map(
+          () => newLayoutImageUrls[newLayoutUrlIdx++] || ""
+        );
+        const images = [...(l.images || []), ...uploaded].filter(Boolean);
+        return {
+          title: l.title,
+          area: String(l.area ?? "").trim(),
+          price: l.price,
+          images,
+          image: images[0] || "",
+        };
+      };
+      const layoutsPayload = (layouts || []).map(mapLayoutRow);
+      const newLayoutsPayload = (newLayouts || []).map(mapLayoutRow);
 
       const payload = {
         id,
@@ -642,7 +676,7 @@ const UpdateProject = () => {
         })),
         galleryImages: galleryImages || [],
         galleryNewImages: newGalleryPaths,
-        layouts: layouts || [],
+        layouts: layoutsPayload,
         newLayouts: newLayoutsPayload,
         active: form.active,
       };
@@ -1273,7 +1307,7 @@ const UpdateProject = () => {
               <label className="block text-sm text-white">
                 Layouts{" "}
                 <span className="text-gray-400 font-normal">
-                  (title required; area, price & image optional)
+                  (title required; area e.g. 279 - 456, price & images optional)
                 </span>
               </label>
               <button
@@ -1310,10 +1344,11 @@ const UpdateProject = () => {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm mb-1 text-white">Area</label>
+                      <label className="block text-sm mb-1 text-white">Area (sq ft)</label>
                       <input
-                        type="number"
+                        type="text"
                         value={l.area}
+                        placeholder="e.g. 279 - 456"
                         name="area"
                         onChange={
                           isNew
@@ -1341,12 +1376,11 @@ const UpdateProject = () => {
                   <input
                     type="file"
                     accept="image/*"
+                    multiple
                     className="hidden"
                     id={`layoutInput-${rowKey}`}
-                    onChange={
-                      isNew
-                        ? (e) => handleNewLayoutImageChange(l.id, e)
-                        : (e) => handleLayoutImageChange(l._id, e)
+                    onChange={(e) =>
+                      handleLayoutImagesAdd(isNew ? l.id : l._id, isNew, e)
                     }
                   />
                   <button
@@ -1356,25 +1390,39 @@ const UpdateProject = () => {
                     }
                     className="px-5 py-2 bg-white border rounded-md text-black mb-2"
                   >
-                    {isNew ? "Add image" : "Change image"}{" "}
-                    <span className="text-gray-500 font-normal">(optional)</span>
+                    Add images{" "}
+                    <span className="text-gray-500 font-normal">(optional, multiple)</span>
                   </button>
-                  {(l.imagePreview || (l.image && l.image !== "")) && (
-                    <FilePreviewCard
-                      onRemove={() => clearLayoutImage(l, isNew)}
-                      ariaLabel="Remove layout image"
-                      className="mb-2 inline-block"
-                    >
-                      <img
-                        src={
-                          l.imagePreview ||
-                          (typeof l.image === "string" ? asset(l.image) : "")
-                        }
-                        alt=""
-                        className="h-40 w-40 object-cover"
-                      />
-                    </FilePreviewCard>
-                  )}
+                  <div className="mb-2 flex flex-wrap gap-3">
+                    {(l.images || []).map((url) => (
+                      <FilePreviewCard
+                        key={url}
+                        onRemove={() => removeLayoutStoredImage(l, isNew, url)}
+                        ariaLabel="Remove layout image"
+                        className="inline-block"
+                      >
+                        <img
+                          src={asset(url)}
+                          alt=""
+                          className="h-40 w-40 object-cover"
+                        />
+                      </FilePreviewCard>
+                    ))}
+                    {(l.pendingFiles || []).map((p) => (
+                      <FilePreviewCard
+                        key={p.id}
+                        onRemove={() => removeLayoutPendingImage(l, isNew, p.id)}
+                        ariaLabel="Remove layout image"
+                        className="inline-block"
+                      >
+                        <img
+                          src={p.preview}
+                          alt=""
+                          className="h-40 w-40 object-cover"
+                        />
+                      </FilePreviewCard>
+                    ))}
+                  </div>
                   <button
                     type="button"
                     onClick={

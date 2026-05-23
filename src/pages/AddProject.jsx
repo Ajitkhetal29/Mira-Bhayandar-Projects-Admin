@@ -147,46 +147,50 @@ const AddProject = () => {
         title: "",
         area: "",
         price: "",
-        imageFile: null,
-        imagePreview: null,
+        imageFiles: [],
       },
     ]);
   const removeLayout = (id) =>
     setLayouts((prev) => {
       const rem = prev.find((x) => x.id === id);
-      if (rem?.imagePreview) URL.revokeObjectURL(rem.imagePreview);
+      (rem?.imageFiles || []).forEach((img) => {
+        if (img.preview) URL.revokeObjectURL(img.preview);
+      });
       return prev.filter((x) => x.id !== id);
     });
   const handleLayoutChange = (id, field, value) =>
     setLayouts((prev) =>
       prev.map((l) => (l.id === id ? { ...l, [field]: value } : l))
     );
-  const handleLayoutImage = (id, e) => {
-    const file = e.target.files?.[0];
+  const handleLayoutImages = (id, e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
     setLayouts((prev) =>
       prev.map((l) => {
         if (l.id !== id) return l;
-        if (l.imagePreview) URL.revokeObjectURL(l.imagePreview);
-        return {
-          ...l,
-          imageFile: file || null,
-          imagePreview: file ? URL.createObjectURL(file) : null,
-        };
+        const added = files.map((file, idx) => ({
+          id: Date.now() + idx,
+          file,
+          preview: URL.createObjectURL(file),
+        }));
+        return { ...l, imageFiles: [...(l.imageFiles || []), ...added] };
       })
     );
     e.target.value = null;
   };
 
-  const clearLayoutImage = (id) => {
+  const removeLayoutImage = (layoutId, imageId) => {
     setLayouts((prev) =>
       prev.map((l) => {
-        if (l.id !== id) return l;
-        if (l.imagePreview) URL.revokeObjectURL(l.imagePreview);
-        return { ...l, imageFile: null, imagePreview: null };
+        if (l.id !== layoutId) return l;
+        const rem = (l.imageFiles || []).find((img) => img.id === imageId);
+        if (rem?.preview) URL.revokeObjectURL(rem.preview);
+        return {
+          ...l,
+          imageFiles: (l.imageFiles || []).filter((img) => img.id !== imageId),
+        };
       })
     );
-    const input = document.getElementById(`layout-img-${id}`);
-    if (input) input.value = "";
   };
 
   const clearLogo = () => {
@@ -357,12 +361,12 @@ const AddProject = () => {
           file: r.image,
         })),
         ...galleryImages.map((g) => ({ field: "galleryImages", file: g.file })),
-        ...completeLayouts
-          .filter((l) => l.imageFile)
-          .map((l) => ({
+        ...completeLayouts.flatMap((l) =>
+          (l.imageFiles || []).map((img) => ({
             field: "layoutImages",
-            file: l.imageFile,
-          })),
+            file: img.file,
+          }))
+        ),
       ];
 
       const uploaded = await uploadProjectFilesToS3(
@@ -388,12 +392,18 @@ const AddProject = () => {
       const reraScannerUrls = urlByField("reraScannerImage");
 
       let layoutImgIdx = 0;
-      const layoutsPayload = completeLayouts.map((l) => ({
-        title: l.title.trim(),
-        area: l.area,
-        price: l.price,
-        image: l.imageFile ? layoutImageUrls[layoutImgIdx++] || "" : "",
-      }));
+      const layoutsPayload = completeLayouts.map((l) => {
+        const images = (l.imageFiles || []).map(
+          () => layoutImageUrls[layoutImgIdx++] || ""
+        ).filter(Boolean);
+        return {
+          title: l.title.trim(),
+          area: String(l.area ?? "").trim(),
+          price: l.price,
+          images,
+          image: images[0] || "",
+        };
+      });
 
       const response = await axios.post(
         `${backendUrl}/api/project/addProject`,
@@ -762,7 +772,7 @@ const AddProject = () => {
               <label className="block text-sm text-white">
                 Layouts{" "}
                 <span className="text-gray-400 font-normal">
-                  (title required; area, price & image optional)
+                  (title required; area e.g. 279 - 456, price & images optional)
                 </span>
               </label>
               <button
@@ -795,12 +805,13 @@ const AddProject = () => {
                     <div>
                       <label className="block text-sm mb-1 text-white">Area (sq ft)</label>
                       <input
-                        type="number"
+                        type="text"
                         value={l.area}
+                        placeholder="e.g. 279 - 456"
                         onChange={(e) =>
                           handleLayoutChange(l.id, "area", e.target.value)
                         }
-                        className="w-full rounded-xl border border-gray-600 bg-gray-900 px-4 py-2 text-white focus:ring-2 focus:ring-amber-400"
+                        className="w-full rounded-xl border border-gray-600 bg-gray-900 px-4 py-2 text-white placeholder-gray-500 focus:ring-2 focus:ring-amber-400"
                       />
                     </div>
                     <div>
@@ -819,9 +830,10 @@ const AddProject = () => {
                     <input
                       type="file"
                       accept="image/*"
+                      multiple
                       id={`layout-img-${l.id}`}
                       className="hidden"
-                      onChange={(e) => handleLayoutImage(l.id, e)}
+                      onChange={(e) => handleLayoutImages(l.id, e)}
                     />
                     <button
                       type="button"
@@ -830,22 +842,27 @@ const AddProject = () => {
                       }
                       className="px-5 py-2 bg-white border rounded-md text-black shadow-md hover:bg-black hover:text-white transition"
                     >
-                      Add Image{" "}
-                      <span className="text-gray-500 font-normal">(optional)</span>
+                      Add Images{" "}
+                      <span className="text-gray-500 font-normal">(optional, multiple)</span>
                     </button>
                   </div>
-                  {l.imagePreview && (
-                    <FilePreviewCard
-                      onRemove={() => clearLayoutImage(l.id)}
-                      ariaLabel="Remove layout image"
-                      className="mb-4 inline-block"
-                    >
-                      <img
-                        src={l.imagePreview}
-                        alt={l.title || "Layout"}
-                        className="h-40 w-40 object-cover"
-                      />
-                    </FilePreviewCard>
+                  {(l.imageFiles || []).length > 0 && (
+                    <div className="mb-4 flex flex-wrap gap-3">
+                      {(l.imageFiles || []).map((img) => (
+                        <FilePreviewCard
+                          key={img.id}
+                          onRemove={() => removeLayoutImage(l.id, img.id)}
+                          ariaLabel="Remove layout image"
+                          className="inline-block"
+                        >
+                          <img
+                            src={img.preview}
+                            alt={l.title || "Layout"}
+                            className="h-40 w-40 object-cover"
+                          />
+                        </FilePreviewCard>
+                      ))}
+                    </div>
                   )}
                   <button
                     type="button"
