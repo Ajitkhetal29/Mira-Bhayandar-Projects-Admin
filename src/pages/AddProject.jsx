@@ -12,7 +12,7 @@ const resetFileInput = (ref) => {
   if (ref?.current) ref.current.value = "";
 };
 
-const PROJECT_STATUSES = ["Under Construction", "Ready to Move"];
+const PROJECT_STATUSES = ["Under Construction", "Ready to Move","Upcoming"];
 
 const PROPERTY_TYPES = [
   { value: "", label: "— Select property type —" },
@@ -332,14 +332,8 @@ const AddProject = () => {
       toast.error("Project name is required");
       return;
     }
-    if (!form.description.trim()) {
-      toast.error("Description is required");
-      return;
-    }
-    if (!logo) {
-      toast.error("Logo is required");
-      return;
-    }
+ 
+    
     const completeLayouts = layouts.filter((l) => l.title?.trim());
     const completeReraCerts = reraCertificates.filter((r) => r.title?.trim() && r.file);
     const completeReraScanners = reraScannerImages.filter(
@@ -349,7 +343,7 @@ const AddProject = () => {
     setSubmitting(true);
     try {
       const uploadEntries = [
-        { field: "logo", file: logo },
+        ...(logo ? [{ field: "logo", file: logo }] : []),
         ...(coverImage ? [{ field: "coverImage", file: coverImage }] : []),
         ...(coverVideo ? [{ field: "coverVideo", file: coverVideo }] : []),
         ...(bannerImage ? [{ field: "bannerImage", file: bannerImage }] : []),
@@ -367,7 +361,7 @@ const AddProject = () => {
             file: img.file,
           }))
         ),
-      ];
+      ].filter((e) => e.file instanceof File);
 
       const uploaded = await uploadProjectFilesToS3(
         backendUrl,
@@ -422,7 +416,7 @@ const AddProject = () => {
           reraMonth: form.reraMonth || "",
           reraYear: form.reraYear || "",
           features,
-          logo: logoUrls[0],
+          logo: logoUrls[0] || "",
           coverImage: urlByField("coverImage")[0] || "",
           coverVideo: urlByField("coverVideo")[0] || "",
           bannerImage: urlByField("bannerImage")[0] || "",
@@ -528,7 +522,7 @@ const AddProject = () => {
 
           <div>
             <label htmlFor="address" className="block text-sm font-semibold mb-2 text-white">
-              Full address <span className="text-gray-400 font-normal">(optional)</span>
+              Full address <span className="text-gray-400 font-normal"></span>
             </label>
             <textarea id="address" rows={2} value={form.address}
               placeholder="Dronagiri, Plot No. 84, Kaamtha Rd, Nr, Vimla Talao, New, Uran, Mumbai"
@@ -538,13 +532,13 @@ const AddProject = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label htmlFor="latitude" className="block text-sm font-semibold mb-2 text-white">Map latitude <span className="text-gray-400 font-normal">(optional)</span></label>
+              <label htmlFor="latitude" className="block text-sm font-semibold mb-2 text-white">Map latitude <span className="text-gray-400 font-normal"></span></label>
               <input id="latitude" type="text" inputMode="decimal" placeholder="e.g. 19.2812" value={form.latitude}
                 onChange={(e) => setForm((prev) => ({ ...prev, latitude: e.target.value }))}
                 className="w-full border border-gray-200 rounded-md bg-gray-800 p-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500" />
             </div>
             <div>
-              <label htmlFor="longitude" className="block text-sm font-semibold mb-2 text-white">Map longitude <span className="text-gray-400 font-normal">(optional)</span></label>
+              <label htmlFor="longitude" className="block text-sm font-semibold mb-2 text-white">Map longitude <span className="text-gray-400 font-normal"></span></label>
               <input id="longitude" type="text" inputMode="decimal" placeholder="e.g. 72.8574" value={form.longitude}
                 onChange={(e) => setForm((prev) => ({ ...prev, longitude: e.target.value }))}
                 className="w-full border border-gray-200 rounded-md bg-gray-800 p-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500" />
@@ -574,7 +568,7 @@ const AddProject = () => {
           </div>
 
           <div>
-            <label className="block text-sm text-white mb-2">Logo image <span className="text-red-400">*</span></label>
+            <label className="block text-sm text-white mb-2">Logo image </label>
             <input type="file" ref={logoInputRef} accept="image/*" className="hidden" onChange={handleLogoChange} />
             <button type="button" onClick={onLogoButtonClick} className="px-5 py-2 bg-white border rounded-md text-black shadow-md hover:bg-black hover:text-white transition">Upload Logo</button>
             {logoPreview && (
@@ -596,7 +590,7 @@ const AddProject = () => {
           </div>
 
           <div>
-            <label className="block text-sm text-white mb-2">Banner image <span className="text-gray-400">(optional)</span></label>
+            <label className="block text-sm text-white mb-2">Banner image <span className="text-gray-400"></span></label>
             <input type="file" ref={bannerImageInputRef} accept="image/*" className="hidden" onChange={handleBannerImageChange} />
             <button type="button" onClick={onBannerImageButtonClick} className="px-5 py-2 bg-white border rounded-md text-black shadow-md hover:bg-black hover:text-white transition">Upload banner</button>
             {bannerImagePreview && (
@@ -634,8 +628,8 @@ const AddProject = () => {
           </div>
 
           <div>
-            <label htmlFor="description" className="block text-sm mb-2 text-white">Description <span className="text-red-400">*</span></label>
-            <textarea id="description" value={form.description} required rows={4} placeholder="Brief description"
+            <label htmlFor="description" className="block text-sm mb-2 text-white">Description </label>
+            <textarea id="description" value={form.description}  rows={4} placeholder="Brief description"
               onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
               className="w-full rounded-md border border-gray-200 bg-gray-800 p-2 text-white focus:ring-2 focus:ring-indigo-500 min-h-[80px]" />
           </div>

@@ -43,13 +43,14 @@ async function putToPresignedUrl(uploadUrl, file) {
  * Presign + PUT files directly to S3 (bypasses Vercel body size limit).
  */
 export async function uploadProjectFilesToS3(backendUrl, projectName, entries) {
-  if (!entries.length) return [];
+  const validEntries = (entries || []).filter((e) => e?.file instanceof File);
+  if (!validEntries.length) return [];
 
   const { data } = await axios.post(
     `${backendUrl}/api/project/presignUploads`,
     {
       projectName,
-      files: entries.map(({ field, file }) => ({
+      files: validEntries.map(({ field, file }) => ({
         field,
         fileName: file.name,
         contentType: file.type || "application/octet-stream",
@@ -62,7 +63,7 @@ export async function uploadProjectFilesToS3(backendUrl, projectName, entries) {
     throw new Error(data?.message || "Could not get upload URLs");
   }
 
-  if (data.uploads.length !== entries.length) {
+  if (data.uploads.length !== validEntries.length) {
     throw new Error("Upload URL count mismatch");
   }
 
@@ -71,14 +72,16 @@ export async function uploadProjectFilesToS3(backendUrl, projectName, entries) {
   for (let i = 0; i < data.uploads.length; i += BATCH) {
     const slice = data.uploads.slice(i, i + BATCH);
     await Promise.all(
-      slice.map((upload, j) => putToPresignedUrl(upload.uploadUrl, entries[i + j].file))
+      slice.map((upload, j) =>
+        putToPresignedUrl(upload.uploadUrl, validEntries[i + j].file)
+      )
     );
   }
 
   return data.uploads.map((upload, i) => ({
     field: upload.field,
     publicUrl: upload.publicUrl,
-    file: entries[i].file,
+    file: validEntries[i].file,
   }));
 }
 

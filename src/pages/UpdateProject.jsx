@@ -14,7 +14,7 @@ const resetFileInput = (ref) => {
   if (ref?.current) ref.current.value = "";
 };
 
-const PROJECT_STATUSES = ["Under Construction", "Ready to Move"];
+const PROJECT_STATUSES = ["Under Construction", "Ready to Move","Upcoming"];
 
 const PROPERTY_TYPES = [
   { value: "", label: "— Select property type —" },
@@ -319,8 +319,13 @@ const UpdateProject = () => {
   const clearLogo = () => {
     if (logoPreview) URL.revokeObjectURL(logoPreview);
     setLogoPreview(null);
-    setLogo(editableProject?.logo ?? null);
-    setLogoChanged(false);
+    if (logo instanceof File) {
+      setLogo(editableProject?.logo ?? "");
+      setLogoChanged(false);
+    } else {
+      setLogo("");
+      setLogoChanged(true);
+    }
     resetFileInput(logoInputRef);
   };
 
@@ -417,6 +422,17 @@ const UpdateProject = () => {
     };
     if (isNew) setNewLayouts((prev) => prev.map(patch));
     else setLayouts((prev) => prev.map(patch));
+  };
+
+  const logoDisplaySrc = () => {
+    if (logoChanged && logo instanceof File && logoPreview) return logoPreview;
+    if (logoChanged && logo === "") return null;
+    const path = logoChanged
+      ? typeof logo === "string"
+        ? logo
+        : editableProject?.logo
+      : logo || editableProject?.logo;
+    return path ? asset(path) : null;
   };
 
   const coverImageDisplaySrc = () => {
@@ -547,10 +563,6 @@ const UpdateProject = () => {
       toast.error("Project name is required");
       return;
     }
-    if (!form.description.trim()) {
-      toast.error("Description is required");
-      return;
-    }
     setSubmitting(true);
     try {
       const uploadEntries = [];
@@ -585,9 +597,15 @@ const UpdateProject = () => {
         });
       });
 
+      const validUploadEntries = uploadEntries.filter((e) => e.file instanceof File);
+
       const uploaded =
-        uploadEntries.length > 0
-          ? await uploadProjectFilesToS3(backendUrl, form.name.trim(), uploadEntries)
+        validUploadEntries.length > 0
+          ? await uploadProjectFilesToS3(
+              backendUrl,
+              form.name.trim(),
+              validUploadEntries
+            )
           : [];
 
       const firstUrl = (field) =>
@@ -682,7 +700,9 @@ const UpdateProject = () => {
       };
 
       if (pdfChanged) payload.browcherPdf = firstUrl("browcherPdf") || browcherPdf;
-      if (logoChanged) payload.logo = firstUrl("logo") || logo;
+      if (logoChanged)
+        payload.logo =
+          firstUrl("logo") || (typeof logo === "string" ? logo : "") || "";
       if (coverImageChanged)
         payload.coverImage = firstUrl("coverImage") || coverImage;
       if (bannerImageChanged)
@@ -901,14 +921,12 @@ const UpdateProject = () => {
           </div>
 
           <div className="flex flex-col gap-2">
-            <label className="text-gray-200">
-              Description <span className="text-red-400">*</span>
-            </label>
+            <label className="text-gray-200">Description</label>
             <textarea
               name="description"
-              required
               value={form.description}
               onChange={handleFormChange}
+              placeholder="Brief description"
               className="p-2 rounded-lg bg-gray-800 border border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 min-h-[80px]"
             />
           </div>
@@ -997,23 +1015,19 @@ const UpdateProject = () => {
                 onClick={onLogoButtonClick}
                 className="px-5 py-2 bg-white border rounded-md text-black shadow-md hover:bg-black hover:text-white transition"
               >
-                Replace logo
+                {logoDisplaySrc() ? "Replace logo" : "Upload logo"}
               </button>
-              {logoChanged && logoPreview ? (
-                <FilePreviewCard onRemove={clearLogo} ariaLabel="Remove new logo">
+              {logoDisplaySrc() ? (
+                <FilePreviewCard onRemove={clearLogo} ariaLabel="Remove logo">
                   <img
-                    src={logoPreview}
+                    src={logoDisplaySrc()}
                     className="h-24 w-32 object-cover"
                     alt=""
                   />
                 </FilePreviewCard>
-              ) : logo ? (
-                <img
-                  src={asset(logo)}
-                  className="h-24 w-32 rounded border border-gray-600 object-cover"
-                  alt=""
-                />
-              ) : null}
+              ) : (
+                <p className="text-gray-500 text-sm">No logo</p>
+              )}
             </div>
           </div>
 

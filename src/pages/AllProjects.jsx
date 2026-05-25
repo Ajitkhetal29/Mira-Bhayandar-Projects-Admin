@@ -1,13 +1,45 @@
-import React, { useContext, useEffect } from "react";
+import React, { useContext, useEffect, useMemo, useState } from "react";
 import { AppConetxt } from "../context/context";
+import ProjectsPagination from "../components/ProjectsPagination";
+
+const DEFAULT_LIMIT = 10;
 
 const AllProjects = () => {
   const { allProjects, navigate, deleteProject, getAllProjects } =
     useContext(AppConetxt);
 
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(DEFAULT_LIMIT);
+
   useEffect(() => {
     getAllProjects();
   }, []);
+
+  const total = allProjects?.length ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
+
+  const paginatedProjects = useMemo(() => {
+    if (!allProjects?.length) return [];
+    const start = (page - 1) * limit;
+    return allProjects.slice(start, start + limit);
+  }, [allProjects, page, limit]);
+
+  const rowOffset = (page - 1) * limit;
+
+  const handleLimitChange = (nextLimit) => {
+    setLimit(nextLimit);
+    setPage(1);
+  };
+
+  const handleDelete = async (id) => {
+    const isLastOnPage = paginatedProjects.length === 1 && page > 1;
+    await deleteProject(id);
+    if (isLastOnPage) setPage((p) => p - 1);
+  };
 
   if (!allProjects) {
     return (
@@ -36,80 +68,89 @@ const AllProjects = () => {
       </header>
 
       {allProjects.length > 0 ? (
-        <div className="admin-table-wrap">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Sr.</th>
-                <th>Project Name</th>
-                <th>Location</th>
-                <th>Status</th>
-                <th>On website</th>
-                <th>Contact</th>
-                <th>RERA no.</th>
-                <th>RERA possession</th>
-                <th className="text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {allProjects.map((project, i) => (
-                <tr key={project._id}>
-                  <td className="cell-strong">{i + 1}</td>
-                  <td className="cell-strong whitespace-nowrap">{project.name}</td>
-                  <td>{project.location}</td>
-                  <td>{project.status || "Under Construction"}</td>
-                  <td>
-                    <span
-                      className={
-                        project.active !== false
-                          ? "inline-flex rounded-full bg-emerald-900/40 px-2 py-0.5 text-xs text-emerald-300"
-                          : "inline-flex rounded-full bg-gray-700 px-2 py-0.5 text-xs text-gray-400"
-                      }
-                    >
-                      {project.active !== false ? "Visible" : "Hidden"}
-                    </span>
-                  </td>
-                  <td className="whitespace-nowrap">
-                    {project.contactNumber ? (
-                      <a
-                        href={`tel:${String(project.contactNumber).replace(/\s/g, "")}`}
-                        className="link-gold"
-                      >
-                        {project.contactNumber}
-                      </a>
-                    ) : (
-                      "—"
-                    )}
-                  </td>
-                  <td className="whitespace-nowrap">{project.reraNo || "—"}</td>
-                  <td>
-                    {[project.reraPossession?.month, project.reraPossession?.year]
-                      .filter(Boolean)
-                      .join(" ") || "—"}
-                  </td>
-                  <td className="text-right">
-                    <div className="flex justify-end items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => navigate(`/updateProject/${project._id}`)}
-                        className="admin-btn-secondary !py-1.5 !text-xs"
-                      >
-                        Update
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => deleteProject(project._id)}
-                        className="admin-btn-danger !py-1.5 !text-xs"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </td>
+        <>
+          <div className="admin-table-wrap">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Sr.</th>
+                  <th>Project Name</th>
+                  <th>Location</th>
+                  <th>Status</th>
+                  <th>On website</th>
+                  <th>Contact</th>
+                  <th>RERA no.</th>
+                  <th>RERA possession</th>
+                  <th className="text-right">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {paginatedProjects.map((project, i) => (
+                  <tr key={project._id}>
+                    <td className="cell-strong">{rowOffset + i + 1}</td>
+                    <td className="cell-strong whitespace-nowrap">{project.name}</td>
+                    <td>{project.location}</td>
+                    <td>{project.status || "Under Construction"}</td>
+                    <td>
+                      <span
+                        className={
+                          project.active !== false
+                            ? "inline-flex rounded-full bg-emerald-900/40 px-2 py-0.5 text-xs text-emerald-300"
+                            : "inline-flex rounded-full bg-gray-700 px-2 py-0.5 text-xs text-gray-400"
+                        }
+                      >
+                        {project.active !== false ? "Visible" : "Hidden"}
+                      </span>
+                    </td>
+                    <td className="whitespace-nowrap">
+                      {project.contactNumber ? (
+                        <a
+                          href={`tel:${String(project.contactNumber).replace(/\s/g, "")}`}
+                          className="link-gold"
+                        >
+                          {project.contactNumber}
+                        </a>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td className="whitespace-nowrap">{project.reraNo || "—"}</td>
+                    <td>
+                      {[project.reraPossession?.month, project.reraPossession?.year]
+                        .filter(Boolean)
+                        .join(" ") || "—"}
+                    </td>
+                    <td className="text-right">
+                      <div className="flex justify-end items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/updateProject/${project._id}`)}
+                          className="admin-btn-secondary !py-1.5 !text-xs"
+                        >
+                          Update
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(project._id)}
+                          className="admin-btn-danger !py-1.5 !text-xs"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <ProjectsPagination
+            page={page}
+            limit={limit}
+            total={total}
+            onPageChange={setPage}
+            onLimitChange={handleLimitChange}
+          />
+        </>
       ) : (
         <div className="admin-card admin-empty">
           No projects found. Get started by adding a new one.
