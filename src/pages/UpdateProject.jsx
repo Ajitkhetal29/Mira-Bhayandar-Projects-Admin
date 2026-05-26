@@ -59,6 +59,7 @@ const UpdateProject = () => {
   const coverImageInputRef = useRef(null);
   const bannerImageInputRef = useRef(null);
   const coverVideoInputRef = useRef(null);
+  const walkthroughVideoInputRef = useRef(null);
   const ocCertInputRef = useRef(null);
 
   const [submitting, setSubmitting] = useState(false);
@@ -105,6 +106,10 @@ const UpdateProject = () => {
   const [coverVideo, setCoverVideo] = useState(null);
   const [coverVideoPreview, setCoverVideoPreview] = useState(null);
   const [coverVideoChanged, setCoverVideoChanged] = useState(false);
+
+  const [walkthroughVideo, setWalkthroughVideo] = useState(null);
+  const [walkthroughVideoPreview, setWalkthroughVideoPreview] = useState(null);
+  const [walkthroughVideoChanged, setWalkthroughVideoChanged] = useState(false);
 
   const [reraCertificates, setReraCertificates] = useState([]);
   const [newReraCertificates, setNewReraCertificates] = useState([]);
@@ -167,10 +172,12 @@ const UpdateProject = () => {
       setCoverImage(found.coverImage || null);
       setBannerImage(found.bannerImage || null);
       setCoverVideo(found.coverVideo || null);
+      setWalkthroughVideo(found.walkthroughVideo || null);
       setLogoChanged(false);
       setCoverImageChanged(false);
       setBannerImageChanged(false);
       setCoverVideoChanged(false);
+      setWalkthroughVideoChanged(false);
       setReraCertificates(loadTitledAssets(found.reraCertificate, "file"));
       setNewReraCertificates([]);
       setReraScannerImages(loadTitledAssets(found.reraScannerImage, "image"));
@@ -181,6 +188,7 @@ const UpdateProject = () => {
       setCoverImagePreview(null);
       setBannerImagePreview(null);
       setCoverVideoPreview(null);
+      setWalkthroughVideoPreview(null);
     }
   }, [id, allProjects]);
 
@@ -203,6 +211,7 @@ const UpdateProject = () => {
       if (coverImagePreview) URL.revokeObjectURL(coverImagePreview);
       if (bannerImagePreview) URL.revokeObjectURL(bannerImagePreview);
       if (coverVideoPreview) URL.revokeObjectURL(coverVideoPreview);
+      if (walkthroughVideoPreview) URL.revokeObjectURL(walkthroughVideoPreview);
     };
   }, [
     newGalleryImages,
@@ -213,6 +222,7 @@ const UpdateProject = () => {
     coverImagePreview,
     bannerImagePreview,
     coverVideoPreview,
+    walkthroughVideoPreview,
   ]);
 
   const handleFormChange = (e) => {
@@ -291,6 +301,16 @@ const UpdateProject = () => {
     e.target.value = null;
   };
 
+  const handleWalkthroughVideoChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setWalkthroughVideoChanged(true);
+    if (walkthroughVideoPreview) URL.revokeObjectURL(walkthroughVideoPreview);
+    setWalkthroughVideo(file);
+    setWalkthroughVideoPreview(URL.createObjectURL(file));
+    e.target.value = null;
+  };
+
   const onBrowcherButtonClick = () => browcherPdfInputRef.current?.click();
   const handleBrowcherChange = (e) => {
     setPdfChanged(true);
@@ -366,6 +386,19 @@ const UpdateProject = () => {
       setCoverVideoChanged(true);
     }
     resetFileInput(coverVideoInputRef);
+  };
+
+  const clearWalkthroughVideo = () => {
+    if (walkthroughVideoPreview) URL.revokeObjectURL(walkthroughVideoPreview);
+    setWalkthroughVideoPreview(null);
+    if (walkthroughVideo instanceof File) {
+      setWalkthroughVideo(editableProject?.walkthroughVideo ?? "");
+      setWalkthroughVideoChanged(false);
+    } else {
+      setWalkthroughVideo("");
+      setWalkthroughVideoChanged(true);
+    }
+    resetFileInput(walkthroughVideoInputRef);
   };
 
   const clearBrochure = () => {
@@ -468,6 +501,22 @@ const UpdateProject = () => {
         ? coverVideo
         : editableProject?.coverVideo
       : coverVideo || editableProject?.coverVideo;
+    return path ? asset(path) : null;
+  };
+
+  const walkthroughVideoDisplaySrc = () => {
+    if (
+      walkthroughVideoChanged &&
+      walkthroughVideo instanceof File &&
+      walkthroughVideoPreview
+    )
+      return walkthroughVideoPreview;
+    if (walkthroughVideoChanged && walkthroughVideo === "") return null;
+    const path = walkthroughVideoChanged
+      ? typeof walkthroughVideo === "string"
+        ? walkthroughVideo
+        : editableProject?.walkthroughVideo
+      : walkthroughVideo || editableProject?.walkthroughVideo;
     return path ? asset(path) : null;
   };
 
@@ -576,6 +625,8 @@ const UpdateProject = () => {
         uploadEntries.push({ field: "bannerImage", file: bannerImage });
       if (coverVideoChanged && coverVideo instanceof File)
         uploadEntries.push({ field: "coverVideo", file: coverVideo });
+      if (walkthroughVideoChanged && walkthroughVideo instanceof File)
+        uploadEntries.push({ field: "walkthroughVideo", file: walkthroughVideo });
       newReraCertificates
         .filter((r) => r.title?.trim() && r.file)
         .forEach((r) =>
@@ -673,6 +724,7 @@ const UpdateProject = () => {
         coverImageChanged,
         bannerImageChanged,
         coverVideoChanged,
+        walkthroughVideoChanged,
         reraCertificateChanged: true,
         reraScannerImageChanged: true,
         ocCertificateChanged,
@@ -709,6 +761,9 @@ const UpdateProject = () => {
         payload.bannerImage = firstUrl("bannerImage") || bannerImage;
       if (coverVideoChanged)
         payload.coverVideo = firstUrl("coverVideo") || coverVideo;
+      if (walkthroughVideoChanged)
+        payload.walkthroughVideo =
+          firstUrl("walkthroughVideo") || walkthroughVideo;
       if (ocCertificateChanged)
         payload.ocCertificate =
           firstUrl("ocCertificate") ||
@@ -1132,6 +1187,38 @@ const UpdateProject = () => {
             )}
           </div>
 
+          <div>
+            <label className="block text-sm text-white mb-2">Walkthrough video</label>
+            <input
+              type="file"
+              ref={walkthroughVideoInputRef}
+              accept="video/*"
+              className="hidden"
+              onChange={handleWalkthroughVideoChange}
+            />
+            <button
+              type="button"
+              onClick={() => walkthroughVideoInputRef.current?.click()}
+              className="px-5 py-2 bg-white border rounded-md text-black shadow-md hover:bg-black hover:text-white transition"
+            >
+              Replace walkthrough video
+            </button>
+            {walkthroughVideoDisplaySrc() ? (
+              <FilePreviewCard
+                onRemove={clearWalkthroughVideo}
+                ariaLabel="Remove walkthrough video"
+                className="mt-2 block max-w-md"
+              >
+                <video
+                  src={walkthroughVideoDisplaySrc()}
+                  className="h-32 w-full object-cover"
+                  controls
+                />
+              </FilePreviewCard>
+            ) : (
+              <p className="text-gray-500 text-sm mt-1">No walkthrough video</p>
+            )}
+          </div>
 
           <div>
             <div className="flex justify-between items-center mb-4">

@@ -18,7 +18,7 @@ const PROPERTY_TYPES = [
   { value: "", label: "— Select property type —" },
   { value: "Residential", label: "Residential" },
   { value: "Commercial", label: "Commercial" },
-  { value: "Residential & Commercial", label: "Residential & Commercial (both)" },
+  { value: "Residential & Commercial", label: "Residential & Commercial" },
 ];
 
 const MONTHS = [
@@ -80,6 +80,9 @@ const AddProject = () => {
   const [reraCertificates, setReraCertificates] = useState([]);
   const [reraScannerImages, setReraScannerImages] = useState([]);
   const [ocCertificate, setOcCertificate] = useState(null);
+  const [walkthroughVideo, setWalkthroughVideo] = useState(null);
+  const [walkthroughVideoPreview, setWalkthroughVideoPreview] = useState(null);
+  const walkthroughVideoInputRef = useRef(null);
 
   const [layouts, setLayouts] = useState([]);
 
@@ -307,6 +310,24 @@ const AddProject = () => {
     e.target.value = null;
   };
 
+  // walk through video
+
+  const onWalkthroughVideoButtonClick = () => walkthroughVideoInputRef.current?.click();
+  const handleWalkthroughVideoChange = (e) => {
+    if (walkthroughVideoPreview) URL.revokeObjectURL(walkthroughVideoPreview);
+    const file = e.target.files?.[0];
+    setWalkthroughVideoPreview(file ? URL.createObjectURL(file) : null);
+    setWalkthroughVideo(file || null);
+    e.target.value = null;
+  };
+
+  const clearWalkthroughVideo = () => {
+    if (walkthroughVideoPreview) URL.revokeObjectURL(walkthroughVideoPreview);
+    setWalkthroughVideo(null);
+    setWalkthroughVideoPreview(null);
+    resetFileInput(walkthroughVideoInputRef);
+  };
+
   useEffect(() => {
     return () => {
       galleryImages.forEach((g) => URL.revokeObjectURL(g.preview));
@@ -319,6 +340,7 @@ const AddProject = () => {
       if (coverImagePreview) URL.revokeObjectURL(coverImagePreview);
       if (bannerImagePreview) URL.revokeObjectURL(bannerImagePreview);
       if (coverVideoPreview) URL.revokeObjectURL(coverVideoPreview);
+      if (walkthroughVideoPreview) URL.revokeObjectURL(walkthroughVideoPreview);
     };
   }, []);
 
@@ -354,6 +376,7 @@ const AddProject = () => {
           field: "reraScannerImage",
           file: r.image,
         })),
+        ...(walkthroughVideo ? [{ field: "walkthroughVideo", file: walkthroughVideo }] : []),
         ...galleryImages.map((g) => ({ field: "galleryImages", file: g.file })),
         ...completeLayouts.flatMap((l) =>
           (l.imageFiles || []).map((img) => ({
@@ -384,6 +407,7 @@ const AddProject = () => {
       const layoutImageUrls = urlByField("layoutImages");
       const reraCertUrls = urlByField("reraCertificate");
       const reraScannerUrls = urlByField("reraScannerImage");
+      const walkthroughVideoUrl = urlByField("walkthroughVideo")[0] || "";
 
       let layoutImgIdx = 0;
       const layoutsPayload = completeLayouts.map((l) => {
@@ -421,6 +445,7 @@ const AddProject = () => {
           coverVideo: urlByField("coverVideo")[0] || "",
           bannerImage: urlByField("bannerImage")[0] || "",
           browcherPdf: urlByField("browcherPdf")[0] || "",
+          walkthroughVideo: walkthroughVideoUrl,
           reraCertificate: completeReraCerts.map((r, i) => ({
             title: r.title.trim(),
             file: reraCertUrls[i],
@@ -607,6 +632,19 @@ const AddProject = () => {
             {coverVideo && coverVideoPreview && (
               <FilePreviewCard onRemove={clearCoverVideo} ariaLabel="Remove cover video" className="mt-2 block max-w-xs">
                 <video src={coverVideoPreview} className="h-32 w-full object-cover" controls />
+              </FilePreviewCard>
+            )}
+          </div>
+
+          {/* walk through  */}
+
+          <div>
+            <label className="block text-sm text-white mb-2">Walk through video</label>
+            <input type="file" ref={walkthroughVideoInputRef} accept="video/*" className="hidden" onChange={handleWalkthroughVideoChange} />
+            <button type="button" onClick={onWalkthroughVideoButtonClick} className="px-5 py-2 bg-white border rounded-md text-black shadow-md hover:bg-black hover:text-white transition">Upload walk through video</button>
+            {walkthroughVideoPreview && (
+              <FilePreviewCard onRemove={clearWalkthroughVideo} ariaLabel="Remove walk through video" className="mt-2 block max-w-xs">
+                <video src={walkthroughVideoPreview} className="h-32 w-full object-cover" controls />
               </FilePreviewCard>
             )}
           </div>

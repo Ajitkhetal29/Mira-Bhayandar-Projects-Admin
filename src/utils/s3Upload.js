@@ -88,3 +88,24 @@ export async function uploadProjectFilesToS3(backendUrl, projectName, entries) {
 export function galleryTitleFromFile(file) {
   return file.name.replace(/\s+/g, "_").split(".")[0];
 }
+
+/** Presign + PUT a single blog cover image to S3. */
+export async function uploadBlogImageToS3(backendUrl, file) {
+  if (!(file instanceof File)) return null;
+
+  const { data } = await axios.post(
+    `${backendUrl}/api/blog/presignUpload`,
+    {
+      fileName: file.name,
+      contentType: file.type || "application/octet-stream",
+    },
+    { timeout: 30_000 }
+  );
+
+  if (!data?.success || !data.upload?.uploadUrl) {
+    throw new Error(data?.message || "Could not get upload URL");
+  }
+
+  await putToPresignedUrl(data.upload.uploadUrl, file);
+  return data.upload.publicUrl;
+}

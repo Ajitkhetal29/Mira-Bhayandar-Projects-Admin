@@ -2,6 +2,7 @@ import React, { useContext, useState } from "react";
 import { AppConetxt } from "../context/context";
 import axios from "axios";
 import { toast } from "react-toastify";
+import { uploadBlogImageToS3 } from "../utils/s3Upload";
 
 const AddBlog = () => {
   const { navigate, backendUrl } = useContext(AppConetxt);
@@ -30,16 +31,15 @@ const AddBlog = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const fd = new FormData();
-    fd.append("title", formData.title);
-    fd.append("tagline", formData.tagline);
-    fd.append("content", formData.content);
-    fd.append("writer", formData.writer);
-    fd.append("blogImage", blogImage);
-
     try {
-      const response = await axios.post(`${backendUrl}/api/blog/addBlog`, fd, {
-        headers: { "Content-Type": "multipart/form-data" },
+      let imageUrl = "";
+      if (blogImage) {
+        imageUrl = (await uploadBlogImageToS3(backendUrl, blogImage)) || "";
+      }
+
+      const response = await axios.post(`${backendUrl}/api/blog/addBlog`, {
+        ...formData,
+        image: imageUrl,
       });
 
       if (response.data.success) {
