@@ -54,7 +54,6 @@ const UpdateProject = () => {
 
   const inputFeatureRef = useRef();
   const inputGalleryRef = useRef();
-  const browcherPdfInputRef = useRef(null);
   const logoInputRef = useRef(null);
   const coverImageInputRef = useRef(null);
   const bannerImageInputRef = useRef(null);
@@ -85,8 +84,8 @@ const UpdateProject = () => {
   const [features, setFeatures] = useState([]);
   const [galleryImages, setGalleryImages] = useState([]);
   const [newGalleryImages, setNewGalleryImages] = useState([]);
-  const [browcherPdf, setBrowcherPdf] = useState(null);
-  const [pdfChanged, setPdfChanged] = useState(false);
+  const [browcherPdfs, setBrowcherPdfs] = useState([]);
+  const [newBrowcherPdfs, setNewBrowcherPdfs] = useState([]);
 
   const [layouts, setLayouts] = useState([]);
   const [newLayouts, setNewLayouts] = useState([]);
@@ -166,8 +165,8 @@ const UpdateProject = () => {
       );
       setNewGalleryImages([]);
       setNewLayouts([]);
-      setBrowcherPdf(found.browcherPdf || null);
-      setPdfChanged(false);
+      setBrowcherPdfs(loadTitledAssets(found.browcherPdf, "file"));
+      setNewBrowcherPdfs([]);
       setLogo(found.logo || null);
       setCoverImage(found.coverImage || null);
       setBannerImage(found.bannerImage || null);
@@ -197,6 +196,7 @@ const UpdateProject = () => {
       newGalleryImages.forEach((g) => URL.revokeObjectURL(g.preview));
       newReraCertificates.forEach((r) => r.preview && URL.revokeObjectURL(r.preview));
       newReraScannerImages.forEach((r) => r.preview && URL.revokeObjectURL(r.preview));
+      newBrowcherPdfs.forEach((b) => b.preview && URL.revokeObjectURL(b.preview));
       newLayouts.forEach((l) =>
         (l.pendingFiles || []).forEach(
           (p) => p.preview && URL.revokeObjectURL(p.preview)
@@ -217,6 +217,7 @@ const UpdateProject = () => {
     newGalleryImages,
     newReraCertificates,
     newReraScannerImages,
+    newBrowcherPdfs,
     newLayouts,
     logoPreview,
     coverImagePreview,
@@ -311,11 +312,11 @@ const UpdateProject = () => {
     e.target.value = null;
   };
 
-  const onBrowcherButtonClick = () => browcherPdfInputRef.current?.click();
-  const handleBrowcherChange = (e) => {
-    setPdfChanged(true);
-    setBrowcherPdf(e.target.files?.[0]);
-  };
+  const addNewBrowcherPdf = () =>
+    setNewBrowcherPdfs((prev) => [
+      ...prev,
+      { id: Date.now(), title: "", file: null, preview: null },
+    ]);
 
   const addNewReraCert = () =>
     setNewReraCertificates((prev) => [
@@ -399,17 +400,6 @@ const UpdateProject = () => {
       setWalkthroughVideoChanged(true);
     }
     resetFileInput(walkthroughVideoInputRef);
-  };
-
-  const clearBrochure = () => {
-    if (browcherPdf instanceof File) {
-      setBrowcherPdf(editableProject?.browcherPdf ?? "");
-      setPdfChanged(false);
-    } else {
-      setBrowcherPdf("");
-      setPdfChanged(true);
-    }
-    resetFileInput(browcherPdfInputRef);
   };
 
   const clearOcCertificate = () => {
@@ -520,22 +510,6 @@ const UpdateProject = () => {
     return path ? asset(path) : null;
   };
 
-  const brochureDisplayName = () => {
-    if (pdfChanged && browcherPdf instanceof File) return browcherPdf.name;
-    if (pdfChanged && browcherPdf === "") return null;
-    const path = pdfChanged
-      ? typeof browcherPdf === "string"
-        ? browcherPdf
-        : editableProject?.browcherPdf
-      : browcherPdf || editableProject?.browcherPdf;
-    if (!path) return null;
-    if (typeof path === "string") {
-      const parts = path.split("/");
-      return parts[parts.length - 1] || path;
-    }
-    return path.name;
-  };
-
   const ocDisplayName = () => {
     if (ocCertificateChanged && ocCertificate instanceof File)
       return ocCertificate.name;
@@ -615,8 +589,11 @@ const UpdateProject = () => {
     setSubmitting(true);
     try {
       const uploadEntries = [];
-      if (pdfChanged && browcherPdf instanceof File)
-        uploadEntries.push({ field: "browcherPdf", file: browcherPdf });
+      newBrowcherPdfs
+        .filter((b) => b.title?.trim() && b.file)
+        .forEach((b) =>
+          uploadEntries.push({ field: "newBrowcherPdfs", file: b.file })
+        );
       if (logoChanged && logo instanceof File)
         uploadEntries.push({ field: "logo", file: logo });
       if (coverImageChanged && coverImage instanceof File)
@@ -669,6 +646,12 @@ const UpdateProject = () => {
           image: u.publicUrl,
         }));
 
+      const completeNewBrowcherPdfs = newBrowcherPdfs.filter(
+        (b) => b.title?.trim() && b.file
+      );
+      const newBrowcherPdfUrls = uploaded
+        .filter((u) => u.field === "newBrowcherPdfs")
+        .map((u) => u.publicUrl);
       const completeNewReraCerts = newReraCertificates.filter(
         (r) => r.title?.trim() && r.file
       );
@@ -719,7 +702,7 @@ const UpdateProject = () => {
         reraMonth: form.reraMonth || "",
         reraYear: form.reraYear || "",
         features,
-        pdfChanged,
+        browcherPdfChanged: true,
         logoChanged,
         coverImageChanged,
         bannerImageChanged,
@@ -728,6 +711,14 @@ const UpdateProject = () => {
         reraCertificateChanged: true,
         reraScannerImageChanged: true,
         ocCertificateChanged,
+        browcherPdf: (browcherPdfs || []).map((b) => ({
+          title: b.title.trim(),
+          file: b.file,
+        })),
+        newBrowcherPdfs: completeNewBrowcherPdfs.map((b, i) => ({
+          title: b.title.trim(),
+          file: newBrowcherPdfUrls[i],
+        })),
         reraCertificate: (reraCertificates || []).map((r) => ({
           title: r.title.trim(),
           file: r.file,
@@ -751,7 +742,6 @@ const UpdateProject = () => {
         active: form.active,
       };
 
-      if (pdfChanged) payload.browcherPdf = firstUrl("browcherPdf") || browcherPdf;
       if (logoChanged)
         payload.logo =
           firstUrl("logo") || (typeof logo === "string" ? logo : "") || "";
@@ -1026,33 +1016,49 @@ const UpdateProject = () => {
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2 items-center">
-            <label className="text-gray-200">Brochure</label>
-            <input
-              type="file"
-              ref={browcherPdfInputRef}
-              accept="application/pdf"
-              className="hidden"
-              onChange={handleBrowcherChange}
-            />
-            <button
-              type="button"
-              onClick={onBrowcherButtonClick}
-              className="px-5 py-2 bg-white border rounded-md text-black shadow-md hover:bg-black hover:text-white transition"
-            >
-              Replace PDF
-            </button>
-            {brochureDisplayName() && (
-              <FilePreviewCard
-                onRemove={clearBrochure}
-                ariaLabel="Remove brochure"
-                className="max-w-[220px]"
-              >
-                <p className="truncate px-3 py-2 text-sm text-gray-200">
-                  {brochureDisplayName()}
-                </p>
-              </FilePreviewCard>
-            )}
+          <div>
+            <div className="flex justify-between items-center mb-4">
+              <label className="block text-sm text-white">Brochures (PDF)</label>
+              <button type="button" onClick={addNewBrowcherPdf} className="px-5 py-2 bg-white border rounded-md text-black">Add brochure</button>
+            </div>
+            <div className="space-y-4 mb-6">
+              {browcherPdfs.map((b) => (
+                <div key={b._id} className="border border-gray-700 rounded-xl p-4 bg-gray-800/70 flex flex-wrap gap-4 items-end">
+                  <div className="flex-1 min-w-[140px]">
+                    <label className="block text-sm mb-1 text-white">Title</label>
+                    <input type="text" value={b.title} placeholder="Phase 1, Tower A…"
+                      onChange={(e) => setBrowcherPdfs((prev) => prev.map((x) => x._id === b._id ? { ...x, title: e.target.value } : x))}
+                      className="w-full rounded-xl border border-gray-600 bg-gray-900 px-4 py-2 text-white" />
+                  </div>
+                  {b.file && <p className="text-sm text-gray-400 truncate max-w-[200px]">{String(b.file).split("/").pop()}</p>}
+                  <button type="button" onClick={() => setBrowcherPdfs((prev) => prev.filter((x) => x._id !== b._id))} className="px-4 py-2 bg-red-500 rounded-md text-white text-sm">Remove</button>
+                </div>
+              ))}
+              {newBrowcherPdfs.map((b) => (
+                <div key={b.id} className="border border-gray-700 rounded-xl p-4 bg-gray-800/70 flex flex-wrap gap-4 items-end">
+                  <div className="flex-1 min-w-[140px]">
+                    <label className="block text-sm mb-1 text-white">Title</label>
+                    <input type="text" value={b.title} placeholder="Phase 1, Tower A…"
+                      onChange={(e) => setNewBrowcherPdfs((prev) => prev.map((x) => x.id === b.id ? { ...x, title: e.target.value } : x))}
+                      className="w-full rounded-xl border border-gray-600 bg-gray-900 px-4 py-2 text-white" />
+                  </div>
+                  <input type="file" accept=".pdf,application/pdf" id={`new-browcher-pdf-${b.id}`} className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setNewBrowcherPdfs((prev) => prev.map((x) => {
+                        if (x.id !== b.id) return x;
+                        if (x.preview) URL.revokeObjectURL(x.preview);
+                        return { ...x, file, preview: URL.createObjectURL(file) };
+                      }));
+                      e.target.value = null;
+                    }} />
+                  <button type="button" onClick={() => document.getElementById(`new-browcher-pdf-${b.id}`)?.click()} className="px-5 py-2 bg-white border rounded-md text-black">Upload PDF</button>
+                  {b.preview && <p className="text-sm text-gray-400 truncate max-w-[160px]">{b.file?.name}</p>}
+                  <button type="button" onClick={() => setNewBrowcherPdfs((prev) => { const rem = prev.find((x) => x.id === b.id); if (rem?.preview) URL.revokeObjectURL(rem.preview); return prev.filter((x) => x.id !== b.id); })} className="px-4 py-2 bg-red-500 rounded-md text-white text-sm">Remove</button>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div>
