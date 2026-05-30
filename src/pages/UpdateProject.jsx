@@ -9,6 +9,7 @@ import {
   uploadProjectFilesToS3,
 } from "../utils/s3Upload";
 import FilePreviewCard from "../components/FilePreviewCard";
+import { PLAN_OPTIONS } from "../constants/project";
 
 const resetFileInput = (ref) => {
   if (ref?.current) ref.current.value = "";
@@ -55,6 +56,7 @@ const UpdateProject = () => {
   const inputFeatureRef = useRef();
   const inputGalleryRef = useRef();
   const logoInputRef = useRef(null);
+  const builderLogoInputRef = useRef(null);
   const coverImageInputRef = useRef(null);
   const bannerImageInputRef = useRef(null);
   const coverVideoInputRef = useRef(null);
@@ -89,10 +91,20 @@ const UpdateProject = () => {
 
   const [layouts, setLayouts] = useState([]);
   const [newLayouts, setNewLayouts] = useState([]);
+  const [plans, setPlans] = useState([]);
+
+  const togglePlan = (plan) =>
+    setPlans((prev) =>
+      prev.includes(plan) ? prev.filter((p) => p !== plan) : [...prev, plan]
+    );
 
   const [logo, setLogo] = useState(null);
   const [logoPreview, setLogoPreview] = useState(null);
   const [logoChanged, setLogoChanged] = useState(false);
+
+  const [builderLogo, setBuilderLogo] = useState(null);
+  const [builderLogoPreview, setBuilderLogoPreview] = useState(null);
+  const [builderLogoChanged, setBuilderLogoChanged] = useState(false);
 
   const [coverImage, setCoverImage] = useState(null);
   const [coverImagePreview, setCoverImagePreview] = useState(null);
@@ -154,6 +166,7 @@ const UpdateProject = () => {
         active: found.active !== false,
       });
       setFeatures(found.features || []);
+      setPlans(Array.isArray(found.plans) ? [...found.plans] : []);
       setGalleryImages(found.galleryImages || []);
       setLayouts(
         (found.layouts || []).map((l) => ({
@@ -168,11 +181,13 @@ const UpdateProject = () => {
       setBrowcherPdfs(loadTitledAssets(found.browcherPdf, "file"));
       setNewBrowcherPdfs([]);
       setLogo(found.logo || null);
+      setBuilderLogo(found.builderLogo || null);
       setCoverImage(found.coverImage || null);
       setBannerImage(found.bannerImage || null);
       setCoverVideo(found.coverVideo || null);
       setWalkthroughVideo(found.walkthroughVideo || null);
       setLogoChanged(false);
+      setBuilderLogoChanged(false);
       setCoverImageChanged(false);
       setBannerImageChanged(false);
       setCoverVideoChanged(false);
@@ -184,6 +199,7 @@ const UpdateProject = () => {
       setOcCertificate(null);
       setOcCertificateChanged(false);
       setLogoPreview(null);
+      setBuilderLogoPreview(null);
       setCoverImagePreview(null);
       setBannerImagePreview(null);
       setCoverVideoPreview(null);
@@ -208,6 +224,7 @@ const UpdateProject = () => {
         )
       );
       if (logoPreview) URL.revokeObjectURL(logoPreview);
+      if (builderLogoPreview) URL.revokeObjectURL(builderLogoPreview);
       if (coverImagePreview) URL.revokeObjectURL(coverImagePreview);
       if (bannerImagePreview) URL.revokeObjectURL(bannerImagePreview);
       if (coverVideoPreview) URL.revokeObjectURL(coverVideoPreview);
@@ -220,6 +237,7 @@ const UpdateProject = () => {
     newBrowcherPdfs,
     newLayouts,
     logoPreview,
+    builderLogoPreview,
     coverImagePreview,
     bannerImagePreview,
     coverVideoPreview,
@@ -271,6 +289,15 @@ const UpdateProject = () => {
     const file = e.target.files?.[0];
     setLogo(file || null);
     setLogoPreview(file ? URL.createObjectURL(file) : null);
+  };
+
+  const onBuilderLogoButtonClick = () => builderLogoInputRef.current?.click();
+  const handleBuilderLogoChange = (e) => {
+    setBuilderLogoChanged(true);
+    if (builderLogoPreview) URL.revokeObjectURL(builderLogoPreview);
+    const file = e.target.files?.[0];
+    setBuilderLogo(file || null);
+    setBuilderLogoPreview(file ? URL.createObjectURL(file) : null);
   };
 
   const onCoverImageButtonClick = () => coverImageInputRef.current?.click();
@@ -348,6 +375,19 @@ const UpdateProject = () => {
       setLogoChanged(true);
     }
     resetFileInput(logoInputRef);
+  };
+
+  const clearBuilderLogo = () => {
+    if (builderLogoPreview) URL.revokeObjectURL(builderLogoPreview);
+    setBuilderLogoPreview(null);
+    if (builderLogo instanceof File) {
+      setBuilderLogo(editableProject?.builderLogo ?? "");
+      setBuilderLogoChanged(false);
+    } else {
+      setBuilderLogo("");
+      setBuilderLogoChanged(true);
+    }
+    resetFileInput(builderLogoInputRef);
   };
 
   const clearCoverImage = () => {
@@ -455,6 +495,18 @@ const UpdateProject = () => {
         ? logo
         : editableProject?.logo
       : logo || editableProject?.logo;
+    return path ? asset(path) : null;
+  };
+
+  const builderLogoDisplaySrc = () => {
+    if (builderLogoChanged && builderLogo instanceof File && builderLogoPreview)
+      return builderLogoPreview;
+    if (builderLogoChanged && builderLogo === "") return null;
+    const path = builderLogoChanged
+      ? typeof builderLogo === "string"
+        ? builderLogo
+        : editableProject?.builderLogo
+      : builderLogo || editableProject?.builderLogo;
     return path ? asset(path) : null;
   };
 
@@ -596,6 +648,8 @@ const UpdateProject = () => {
         );
       if (logoChanged && logo instanceof File)
         uploadEntries.push({ field: "logo", file: logo });
+      if (builderLogoChanged && builderLogo instanceof File)
+        uploadEntries.push({ field: "builderLogo", file: builderLogo });
       if (coverImageChanged && coverImage instanceof File)
         uploadEntries.push({ field: "coverImage", file: coverImage });
       if (bannerImageChanged && bannerImage instanceof File)
@@ -693,6 +747,7 @@ const UpdateProject = () => {
         location: form.location,
         address: form.address.trim(),
         propertyType: form.propertyType,
+        plans,
         status: form.status,
         contactNumber: form.contactNumber.trim(),
         latitude: form.latitude.trim(),
@@ -704,6 +759,7 @@ const UpdateProject = () => {
         features,
         browcherPdfChanged: true,
         logoChanged,
+        builderLogoChanged,
         coverImageChanged,
         bannerImageChanged,
         coverVideoChanged,
@@ -745,6 +801,11 @@ const UpdateProject = () => {
       if (logoChanged)
         payload.logo =
           firstUrl("logo") || (typeof logo === "string" ? logo : "") || "";
+      if (builderLogoChanged)
+        payload.builderLogo =
+          firstUrl("builderLogo") ||
+          (typeof builderLogo === "string" ? builderLogo : "") ||
+          "";
       if (coverImageChanged)
         payload.coverImage = firstUrl("coverImage") || coverImage;
       if (bannerImageChanged)
@@ -864,6 +925,28 @@ const UpdateProject = () => {
                   </option>
                 ))}
               </select>
+            </div>
+            <div className="flex flex-col md:col-span-2">
+              <label className="mb-1 text-gray-200">Available plans</label>
+              <p className="text-xs text-gray-400 mb-2">
+                Configurations for filters and cards on the public site.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {PLAN_OPTIONS.map((plan) => (
+                  <button
+                    key={plan}
+                    type="button"
+                    onClick={() => togglePlan(plan)}
+                    className={`px-3 py-1.5 rounded-full text-sm border transition ${
+                      plans.includes(plan)
+                        ? "bg-indigo-600 border-indigo-500 text-white"
+                        : "bg-gray-800 border-gray-600 text-gray-300 hover:border-gray-400"
+                    }`}
+                  >
+                    {plan}
+                  </button>
+                ))}
+              </div>
             </div>
             <div className="flex flex-col">
               <label className="mb-1 text-gray-200">Contact number</label>
@@ -1061,34 +1144,66 @@ const UpdateProject = () => {
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm text-white mb-2">Logo</label>
-            <div className="flex items-center gap-4 flex-wrap">
-              <input
-                type="file"
-                ref={logoInputRef}
-                accept="image/*"
-                className="hidden"
-                onChange={handleLogoChange}
-              />
-              <button
-                type="button"
-                onClick={onLogoButtonClick}
-                className="px-5 py-2 bg-white border rounded-md text-black shadow-md hover:bg-black hover:text-white transition"
-              >
-                {logoDisplaySrc() ? "Replace logo" : "Upload logo"}
-              </button>
-              {logoDisplaySrc() ? (
-                <FilePreviewCard onRemove={clearLogo} ariaLabel="Remove logo">
-                  <img
-                    src={logoDisplaySrc()}
-                    className="h-24 w-32 object-cover"
-                    alt=""
-                  />
-                </FilePreviewCard>
-              ) : (
-                <p className="text-gray-500 text-sm">No logo</p>
-              )}
+          <div className="grid gap-6 md:grid-cols-2">
+            <div>
+              <label className="block text-sm text-white mb-2">Builder logo</label>
+              <div className="flex items-center gap-4 flex-wrap">
+                <input
+                  type="file"
+                  ref={builderLogoInputRef}
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleBuilderLogoChange}
+                />
+                <button
+                  type="button"
+                  onClick={onBuilderLogoButtonClick}
+                  className="px-5 py-2 bg-white border rounded-md text-black shadow-md hover:bg-black hover:text-white transition"
+                >
+                  {builderLogoDisplaySrc() ? "Replace builder logo" : "Upload builder logo"}
+                </button>
+                {builderLogoDisplaySrc() ? (
+                  <FilePreviewCard onRemove={clearBuilderLogo} ariaLabel="Remove builder logo">
+                    <img
+                      src={builderLogoDisplaySrc()}
+                      className="h-24 w-32 object-contain"
+                      alt=""
+                    />
+                  </FilePreviewCard>
+                ) : (
+                  <p className="text-gray-500 text-sm">No builder logo</p>
+                )}
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm text-white mb-2">Project logo</label>
+              <div className="flex items-center gap-4 flex-wrap">
+                <input
+                  type="file"
+                  ref={logoInputRef}
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleLogoChange}
+                />
+                <button
+                  type="button"
+                  onClick={onLogoButtonClick}
+                  className="px-5 py-2 bg-white border rounded-md text-black shadow-md hover:bg-black hover:text-white transition"
+                >
+                  {logoDisplaySrc() ? "Replace project logo" : "Upload project logo"}
+                </button>
+                {logoDisplaySrc() ? (
+                  <FilePreviewCard onRemove={clearLogo} ariaLabel="Remove project logo">
+                    <img
+                      src={logoDisplaySrc()}
+                      className="h-24 w-32 object-contain"
+                      alt=""
+                    />
+                  </FilePreviewCard>
+                ) : (
+                  <p className="text-gray-500 text-sm">No project logo</p>
+                )}
+              </div>
             </div>
           </div>
 

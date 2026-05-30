@@ -7,6 +7,7 @@ import {
   uploadProjectFilesToS3,
 } from "../utils/s3Upload";
 import FilePreviewCard from "../components/FilePreviewCard";
+import { PLAN_OPTIONS } from "../constants/project";
 
 const resetFileInput = (ref) => {
   if (ref?.current) ref.current.value = "";
@@ -66,6 +67,9 @@ const AddProject = () => {
   const [logo, setLogo] = useState(null);
   const [logoPreview, setLogoPreview] = useState(null);
   const logoInputRef = useRef(null);
+  const [builderLogo, setBuilderLogo] = useState(null);
+  const [builderLogoPreview, setBuilderLogoPreview] = useState(null);
+  const builderLogoInputRef = useRef(null);
   const [coverImage, setCoverImage] = useState(null);
   const [coverImagePreview, setCoverImagePreview] = useState(null);
   const coverImageInputRef = useRef(null);
@@ -84,6 +88,12 @@ const AddProject = () => {
   const walkthroughVideoInputRef = useRef(null);
 
   const [layouts, setLayouts] = useState([]);
+  const [plans, setPlans] = useState([]);
+
+  const togglePlan = (plan) =>
+    setPlans((prev) =>
+      prev.includes(plan) ? prev.filter((p) => p !== plan) : [...prev, plan]
+    );
 
   const [submitting, setSubmitting] = useState(false);
 
@@ -138,6 +148,15 @@ const AddProject = () => {
     const file = e.target.files?.[0];
     setLogoPreview(file ? URL.createObjectURL(file) : null);
     setLogo(file || null);
+    e.target.value = null;
+  };
+
+  const onBuilderLogoButtonClick = () => builderLogoInputRef.current?.click();
+  const handleBuilderLogoChange = (e) => {
+    if (builderLogoPreview) URL.revokeObjectURL(builderLogoPreview);
+    const file = e.target.files?.[0];
+    setBuilderLogoPreview(file ? URL.createObjectURL(file) : null);
+    setBuilderLogo(file || null);
     e.target.value = null;
   };
 
@@ -200,6 +219,13 @@ const AddProject = () => {
     setLogo(null);
     setLogoPreview(null);
     resetFileInput(logoInputRef);
+  };
+
+  const clearBuilderLogo = () => {
+    if (builderLogoPreview) URL.revokeObjectURL(builderLogoPreview);
+    setBuilderLogo(null);
+    setBuilderLogoPreview(null);
+    resetFileInput(builderLogoInputRef);
   };
 
   const clearCoverImage = () => {
@@ -357,6 +383,7 @@ const AddProject = () => {
         (l) => l.imagePreview && URL.revokeObjectURL(l.imagePreview)
       );
       if (logoPreview) URL.revokeObjectURL(logoPreview);
+      if (builderLogoPreview) URL.revokeObjectURL(builderLogoPreview);
       if (coverImagePreview) URL.revokeObjectURL(coverImagePreview);
       if (bannerImagePreview) URL.revokeObjectURL(bannerImagePreview);
       if (coverVideoPreview) URL.revokeObjectURL(coverVideoPreview);
@@ -387,6 +414,7 @@ const AddProject = () => {
     try {
       const uploadEntries = [
         ...(logo ? [{ field: "logo", file: logo }] : []),
+        ...(builderLogo ? [{ field: "builderLogo", file: builderLogo }] : []),
         ...(coverImage ? [{ field: "coverImage", file: coverImage }] : []),
         ...(coverVideo ? [{ field: "coverVideo", file: coverVideo }] : []),
         ...(bannerImage ? [{ field: "bannerImage", file: bannerImage }] : []),
@@ -419,6 +447,7 @@ const AddProject = () => {
       };
 
       const logoUrls = urlByField("logo");
+      const builderLogoUrls = urlByField("builderLogo");
       const galleryUrls = uploaded
         .filter((u) => u.field === "galleryImages")
         .map((u) => ({
@@ -453,6 +482,7 @@ const AddProject = () => {
           location: form.location,
           address: form.address.trim(),
           propertyType: form.propertyType,
+          plans,
           status: form.status,
           contactNumber: form.contactNumber.trim(),
           latitude: form.latitude.trim(),
@@ -463,6 +493,7 @@ const AddProject = () => {
           reraYear: form.reraYear || "",
           features,
           logo: logoUrls[0] || "",
+          builderLogo: builderLogoUrls[0] || "",
           coverImage: urlByField("coverImage")[0] || "",
           coverVideo: urlByField("coverVideo")[0] || "",
           bannerImage: urlByField("bannerImage")[0] || "",
@@ -545,6 +576,26 @@ const AddProject = () => {
                 {PROJECT_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-semibold mb-2 text-white">Available plans</label>
+              <p className="text-xs text-gray-400 mb-2">Pick configurations for this project — used on the website for filters and cards.</p>
+              <div className="flex flex-wrap gap-2">
+                {PLAN_OPTIONS.map((plan) => (
+                  <button
+                    key={plan}
+                    type="button"
+                    onClick={() => togglePlan(plan)}
+                    className={`px-3 py-1.5 rounded-full text-sm border transition ${
+                      plans.includes(plan)
+                        ? "bg-indigo-600 border-indigo-500 text-white"
+                        : "bg-gray-800 border-gray-600 text-gray-300 hover:border-gray-400"
+                    }`}
+                  >
+                    {plan}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div>
               <label htmlFor="contactNumber" className="block text-sm font-semibold mb-2 text-white">Contact number</label>
               <input id="contactNumber" type="tel" value={form.contactNumber} placeholder="e.g. +91 98765 43210"
@@ -617,15 +668,27 @@ const AddProject = () => {
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm text-white mb-2">Logo image </label>
-            <input type="file" ref={logoInputRef} accept="image/*" className="hidden" onChange={handleLogoChange} />
-            <button type="button" onClick={onLogoButtonClick} className="px-5 py-2 bg-white border rounded-md text-black shadow-md hover:bg-black hover:text-white transition">Upload Logo</button>
-            {logoPreview && (
-              <FilePreviewCard onRemove={clearLogo} ariaLabel="Remove logo" className="mt-2 inline-block">
-                <img src={logoPreview} alt="" className="h-24 w-24 object-cover" />
-              </FilePreviewCard>
-            )}
+          <div className="grid gap-6 md:grid-cols-2">
+            <div>
+              <label className="block text-sm text-white mb-2">Builder logo</label>
+              <input type="file" ref={builderLogoInputRef} accept="image/*" className="hidden" onChange={handleBuilderLogoChange} />
+              <button type="button" onClick={onBuilderLogoButtonClick} className="px-5 py-2 bg-white border rounded-md text-black shadow-md hover:bg-black hover:text-white transition">Upload builder logo</button>
+              {builderLogoPreview && (
+                <FilePreviewCard onRemove={clearBuilderLogo} ariaLabel="Remove builder logo" className="mt-2 inline-block">
+                  <img src={builderLogoPreview} alt="" className="h-24 w-24 object-contain" />
+                </FilePreviewCard>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm text-white mb-2">Project logo</label>
+              <input type="file" ref={logoInputRef} accept="image/*" className="hidden" onChange={handleLogoChange} />
+              <button type="button" onClick={onLogoButtonClick} className="px-5 py-2 bg-white border rounded-md text-black shadow-md hover:bg-black hover:text-white transition">Upload project logo</button>
+              {logoPreview && (
+                <FilePreviewCard onRemove={clearLogo} ariaLabel="Remove project logo" className="mt-2 inline-block">
+                  <img src={logoPreview} alt="" className="h-24 w-24 object-contain" />
+                </FilePreviewCard>
+              )}
+            </div>
           </div>
 
           <div>
